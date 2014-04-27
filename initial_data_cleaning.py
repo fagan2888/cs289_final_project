@@ -71,7 +71,7 @@ def calcEntropy(df, col):
         tot += prob * log2(prob) #Iterate over each value in the column, adding p * log_2(p) to the total
     return -1 * tot #Multiply the total value by negative one to get the entropy value
 
-def removeUnhelpfulColumns(df, filepath, vLimit):
+def remove_unhelpful_columns(df, filepath, vLimit):
     """df = the dataframe to remove unhelpful columns from
     filepath = a path to a csv file with columns: "Cols" and "Include" with a 1 in "Include for columns to include 
     and 0 for columns to exclude
@@ -100,7 +100,7 @@ def removeUnhelpfulColumns(df, filepath, vLimit):
     df.drop(drop, axis = 1, inplace = True) #Drop the columns with too low of an entropy score.
     return
 
-def addSafetyEQ(df, safetyDf):
+def add_safety_eq(df, safetyDf):
     """df = the dataframe the safety columns are to be added to
     safetyDf = the dataframe containing the GES safety equipment data
     
@@ -168,10 +168,10 @@ if __name__ == "__main__":
     #0 if I don't think the field is useful and 1 if I do think the field is useful. I saved that csv as "fullyMerged_usefulVars.csv"
     cyclists_augmented.to_csv("fullyMerged_20{}.csv".format(YEAR))
 
-    removeUnhelpfulColumns(cyclists_augmented, "fullyMerged_usefulVars.csv", 10)
+    remove_unhelpful_columns(cyclists_augmented, "fullyMerged_usefulVars.csv", 10)
 
     print cyclists_augmented.info()
 
-    allButCategorySplit = addSafetyEQ(cyclists_augmented, safety_eq)
+    allButCategorySplit = add_safety_eq(cyclists_augmented, safety_eq)
 
     allButCategorySplit.to_csv("allButCategorySplit_20{}.csv".format(YEAR))
