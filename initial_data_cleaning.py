@@ -1,7 +1,6 @@
 import numpy as np, pandas as pd, os
 
-#This variable should be either 11 or 12 for the year 2011 or 2012 respectively
-YEAR = 12
+MISSING_VALUE = 9999
 
 def removeDuplicates(df):
     from pandas.util.testing import assert_series_equal
@@ -56,9 +55,9 @@ def fillNewColumns(ser, people):
         if strikingDriver["DRUGS"].iloc[0] not in [8, 9]: #Check if the striking driver's drug use is known
             ser["DRIVER_DRUGS"] = strikingDriver["DRUGS"].iloc[0] #If so, use the drug report
     else:
-        ser["DRIVER_AGE"] = 9999 #Say you don't know the driver's age
-        ser["DRIVER_SEX"] = 9999 #Say you don't know the driver's sex
-        ser["DRIVER_DRUGS"] = 9999 #Say you don't know the driver's drug status
+        ser["DRIVER_AGE"] = MISSING_VALUE #Say you don't know the driver's age
+        ser["DRIVER_SEX"] = MISSING_VALUE #Say you don't know the driver's sex
+        ser["DRIVER_DRUGS"] = MISSING_VALUE #Say you don't know the driver's drug status
     return ser
 
 def calcEntropy(df, col):
@@ -149,7 +148,7 @@ if __name__ == "__main__":
 
     newCols = ["DRIVER_AGE", "DRIVER_SEX", "DRIVER_DRUGS"] #Create a list of the new columns to be added to fullyMerged
 
-    makeNewColumns(fullyMerged, newCols, [9999]) #Initialize the new columns in fullyMerged
+    makeNewColumns(fullyMerged, newCols, [MISSING_VALUE]) #Initialize the new columns in fullyMerged
 
     fullyMerged = fullyMerged.apply(fillNewColumns, axis = 1, args=(persons,)) #Fill in the new columns in fullyMerged
 
