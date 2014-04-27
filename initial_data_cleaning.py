@@ -146,6 +146,7 @@ def augment_cyclist_data(cyclists, accidents, vehicles):
             right_on = ["CASENUM", "VEH_NO"], suffixes = ("", "_vehDup"))
     #Augment the person and vehicle data with accident data
     with_accident_data = pd.merge(with_vehicle_data, accidents, how = "left", on = "CASENUM", suffixes = ("", "_accDup"))
+    removeDuplicates(with_accident_data) #Remove duplicate columns which contain no new information
     return with_accident_data
 
 if __name__ == "__main__":
@@ -156,11 +157,9 @@ if __name__ == "__main__":
     cyclists = isolate_cyclists(persons)
     cyclists_augmented = augment_cyclist_data(cyclists, accidents, vehicles)
 
-    removeDuplicates(cyclists_augmented) #Remove duplicate columns which contain no new information
+    columns_to_add = ["DRIVER_AGE", "DRIVER_SEX", "DRIVER_DRUGS"] #Create a list of the new columns to be added to cyclists_augmented
 
-    newCols = ["DRIVER_AGE", "DRIVER_SEX", "DRIVER_DRUGS"] #Create a list of the new columns to be added to cyclists_augmented
-
-    makeNewColumns(cyclists_augmented, newCols, [MISSING_VALUE]) #Initialize the new columns in cyclists_augmented
+    makeNewColumns(cyclists_augmented, columns_to_add, [MISSING_VALUE]) #Initialize the new columns in cyclists_augmented
 
     cyclists_augmented = cyclists_augmented.apply(fillNewColumns, axis = 1, args=(persons,)) #Fill in the new columns in cyclists_augmented
 
