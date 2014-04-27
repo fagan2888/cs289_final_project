@@ -33,12 +33,12 @@ def add_new_columns(df, columns_to_add, initial_values):
     for i, j in iterable:
         df[i] = j #Create and initialize the new columns
 
-def fillNewColumns(ser, people):
+def fillNewColumns(ser, persons):
     """ser = a row series in the data frame the new column is being made for
-    people = the dataframe of the GES person data
+    persons = the dataframe of the GES person data
     
     ========
-    Fills in the new columns of ser using the people dataframe.
+    Fills in the new columns of ser using the persons dataframe.
     Note this function is "hard-coded" given the columns created with add_new_columns()."""
     relPpl = persons[persons.CASENUM == ser["CASENUM"]] #Filter the person file to only those involved in the relevant crash
     strikingDriver = relPpl[(relPpl.VEH_NO == ser["STR_VEH"]) & (relPpl.PER_TYP == 1)] #Isolate the driver who struck the cyclist
@@ -158,8 +158,10 @@ if __name__ == "__main__":
 
     columns_to_add = ["DRIVER_AGE", "DRIVER_SEX", "DRIVER_DRUGS"] #Create a list of the new columns to be added to cyclists_augmented
 
-    add_new_columns(cyclists_augmented, columns_to_add, [MISSING_VALUE]) #Initialize the new columns in cyclists_augmented
+    #Initialize the new columns in cyclists_augmented
+    add_new_columns(cyclists_augmented, columns_to_add, [MISSING_VALUE])
 
+    #Fill in the new columns with real data
     cyclists_augmented = cyclists_augmented.apply(fillNewColumns, axis = 1, args=(persons,)) #Fill in the new columns in cyclists_augmented
 
     #Output a csv, which I then use to get the column names in one column. Next to it I place a column called "Include" which contains
