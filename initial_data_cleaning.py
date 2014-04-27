@@ -2,7 +2,7 @@ import numpy as np, pandas as pd, os
 
 MISSING_VALUE = 9999
 
-def removeDuplicates(df):
+def remove_duplicate_columns(df):
     from pandas.util.testing import assert_series_equal
     
     unequalList = [] #Initialize a list to store the duplicate columns with new information
@@ -18,21 +18,20 @@ def removeDuplicates(df):
     df.drop(equalDups, axis = 1, inplace = True) #Drop the equal duplicate columns from df. Note that here axis = 1 for columns
     return
 
-def makeNewColumns(df, columnList, initialVals):
+def add_new_columns(df, columns_to_add, initial_values):
     """df = the dataframe to be altered.
-    columnList = a list of the new columns to be added to the dataframe
-    initialVals = a list of the initial values for the new columns.
-    initialVals should be of length 1 or of length == len(columnList).
-    If len(initialVals) == 1 then all columns will have the same initial value."""
+    columns_to_add = a list of the new columns to be added to the dataframe
+    initial_values = a list of the initial values for the new columns.
+    initial_values should be of length 1 or of length == len(columns_to_add).
+    If len(initial_values) == 1 then all columns will have the same initial value."""
     
-    if len(initialVals) == len(columnList): #Create the tuples of column and inital value pairs
-        iterable = zip(columnList,initialVals)
-    elif len(initialVals) == 1: #Create the tuples of column and inital value pairs
-        val = initialVals[0] #Use the sole value in initialVals.
-        iterable = [(x, val) for x in columnList]
+    if len(initial_values) == len(columns_to_add): #Create the tuples of column and inital value pairs
+        iterable = zip(columns_to_add,initial_values)
+    elif len(initial_values) == 1: #Create the tuples of column and inital value pairs
+        val = initial_values[0] #Use the sole value in initial_values.
+        iterable = [(x, val) for x in columns_to_add]
     for i, j in iterable:
         df[i] = j #Create and initialize the new columns
-    return
 
 def fillNewColumns(ser, people):
     """ser = a row series in the data frame the new column is being made for
@@ -40,7 +39,7 @@ def fillNewColumns(ser, people):
     
     ========
     Fills in the new columns of ser using the people dataframe.
-    Note this function is "hard-coded" given the columns created with makeNewColumns()."""
+    Note this function is "hard-coded" given the columns created with add_new_columns()."""
     relPpl = persons[persons.CASENUM == ser["CASENUM"]] #Filter the person file to only those involved in the relevant crash
     strikingDriver = relPpl[(relPpl.VEH_NO == ser["STR_VEH"]) & (relPpl.PER_TYP == 1)] #Isolate the driver who struck the cyclist
     if len(strikingDriver) > 0: #Make sure the vehicle has a driver. One record does not have a driver.
@@ -109,7 +108,7 @@ def addSafetyEQ(df, safetyDf):
     Returns the modified df"""
     
     cols = ["MSAFEQMT{}".format(x) for x in np.sort(safetyDf.MSAFEQMT.unique().tolist())] #Create the new column names
-    makeNewColumns(df, cols, [0]) #Add the new columns to the dataframe and initialize them with zero
+    add_new_columns(df, cols, [0]) #Add the new columns to the dataframe and initialize them with zero
     df = df.apply(fillSafetyColumns, axis = 1, args = (safetyDf, cols)) #fill in the new columns
     return df
 
@@ -146,7 +145,7 @@ def augment_cyclist_data(cyclists, accidents, vehicles):
             right_on = ["CASENUM", "VEH_NO"], suffixes = ("", "_vehDup"))
     #Augment the person and vehicle data with accident data
     with_accident_data = pd.merge(with_vehicle_data, accidents, how = "left", on = "CASENUM", suffixes = ("", "_accDup"))
-    removeDuplicates(with_accident_data) #Remove duplicate columns which contain no new information
+    remove_duplicate_columns(with_accident_data) #Remove duplicate columns which contain no new information
     return with_accident_data
 
 if __name__ == "__main__":
@@ -159,7 +158,7 @@ if __name__ == "__main__":
 
     columns_to_add = ["DRIVER_AGE", "DRIVER_SEX", "DRIVER_DRUGS"] #Create a list of the new columns to be added to cyclists_augmented
 
-    makeNewColumns(cyclists_augmented, columns_to_add, [MISSING_VALUE]) #Initialize the new columns in cyclists_augmented
+    add_new_columns(cyclists_augmented, columns_to_add, [MISSING_VALUE]) #Initialize the new columns in cyclists_augmented
 
     cyclists_augmented = cyclists_augmented.apply(fillNewColumns, axis = 1, args=(persons,)) #Fill in the new columns in cyclists_augmented
 
