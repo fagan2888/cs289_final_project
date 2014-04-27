@@ -125,17 +125,28 @@ def fillSafetyColumns(ser, safetyDf, cols):
             ser[col] = 1 #If so, change this column's value to 1.
     return ser
 
-if __name__ == "__main__":
-    accidents = pd.read_table(os.path.join("GES_{}".format(YEAR), "ACCIDENT.TXT"))
-    vehicles = pd.read_table(os.path.join("GES_{}".format(YEAR), "VEHICLE.TXT"))
-    persons = pd.read_table(os.path.join("GES_{}".format(YEAR), "PERSON.TXT"))
-    safety_eq = pd.read_table(os.path.join("GES_{}".format(YEAR), "SAFETYEQ.TXT"))
+def get_tables(year):
+    accidents = pd.read_table(os.path.join("GES_{}".format(year), "ACCIDENT.TXT"))
+    vehicles = pd.read_table(os.path.join("GES_{}".format(year), "VEHICLE.TXT"))
+    persons = pd.read_table(os.path.join("GES_{}".format(year), "PERSON.TXT"))
+    safety_eq = pd.read_table(os.path.join("GES_{}".format(year), "SAFETYEQ.TXT"))
+    return accidents, vehicles, persons, safety_eq
 
+def isolate_cyclists(persons):
     cond1 = persons.PER_TYP == 6 #person type == "bicyclist"
     cond2 = persons.PER_TYP == 7 #person type == "other cyclist"
     cond3 = persons.INJ_SEV.isin([2,3,4]) #injury severity is evident and non-incapacitating, incapacitating, or fatal
     cond4 = persons.INJSEV_IM.isin([2,3,4]) #imputed injury severity is evident and non-incapacitating, incapacitating, or fatal
     cyclists = persons[(cond1 | cond2) & (cond3 | cond4)] #cyclists with evident&non-incapacitating, incapacitating, or fatal
+    return cyclists
+    
+
+if __name__ == "__main__":
+    #This variable should be either 11 or 12 for the year 2011 or 2012 respectively
+    YEAR = 12
+    accidents, vehicles, persons, safety_eq = get_tables(YEAR)
+
+    cyclists = isolate_cyclists(persons)
 
     #Augment the person data on the cyclists with the vehicle data for the vehicle which struck the cyclist
     vehMerged = pd.merge(cyclists, vehicles, how="left", left_on = ["CASENUM", "STR_VEH"],
