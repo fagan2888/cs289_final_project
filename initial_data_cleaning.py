@@ -139,7 +139,14 @@ def isolate_cyclists(persons):
     cond4 = persons.INJSEV_IM.isin([2,3,4]) #imputed injury severity is evident and non-incapacitating, incapacitating, or fatal
     cyclists = persons[(cond1 | cond2) & (cond3 | cond4)] #cyclists with evident&non-incapacitating, incapacitating, or fatal
     return cyclists
-    
+
+def augment_cyclist_data(cyclists, accidents, vehicles):
+    #Augment the person data on the cyclists with the vehicle data for the vehicle which struck the cyclist
+    with_vehicle_data = pd.merge(cyclists, vehicles, how="left", left_on = ["CASENUM", "STR_VEH"],
+            right_on = ["CASENUM", "VEH_NO"], suffixes = ("", "_vehDup"))
+    #Augment the person and vehicle data with accident data
+    with_accident_data = pd.merge(with_vehicle_data, accidents, how = "left", on = "CASENUM", suffixes = ("", "_accDup"))
+    return with_accident_data
 
 if __name__ == "__main__":
     #This variable should be either 11 or 12 for the year 2011 or 2012 respectively
@@ -147,30 +154,24 @@ if __name__ == "__main__":
     accidents, vehicles, persons, safety_eq = get_tables(YEAR)
 
     cyclists = isolate_cyclists(persons)
+    cyclists_augmented = augment_cyclist_data(cyclists, accidents, vehicles)
 
-    #Augment the person data on the cyclists with the vehicle data for the vehicle which struck the cyclist
-    vehMerged = pd.merge(cyclists, vehicles, how="left", left_on = ["CASENUM", "STR_VEH"],
-            right_on = ["CASENUM", "VEH_NO"], suffixes = ("", "_vehDup"))
+    removeDuplicates(cyclists_augmented) #Remove duplicate columns which contain no new information
 
-    #Augment the person and vehicle data with accident data
-    fullyMerged = pd.merge(vehMerged, accidents, how = "left", on = "CASENUM", suffixes = ("", "_accDup"))
+    newCols = ["DRIVER_AGE", "DRIVER_SEX", "DRIVER_DRUGS"] #Create a list of the new columns to be added to cyclists_augmented
 
-    removeDuplicates(fullyMerged) #Remove duplicate columns which contain no new information
+    makeNewColumns(cyclists_augmented, newCols, [MISSING_VALUE]) #Initialize the new columns in cyclists_augmented
 
-    newCols = ["DRIVER_AGE", "DRIVER_SEX", "DRIVER_DRUGS"] #Create a list of the new columns to be added to fullyMerged
-
-    makeNewColumns(fullyMerged, newCols, [MISSING_VALUE]) #Initialize the new columns in fullyMerged
-
-    fullyMerged = fullyMerged.apply(fillNewColumns, axis = 1, args=(persons,)) #Fill in the new columns in fullyMerged
+    cyclists_augmented = cyclists_augmented.apply(fillNewColumns, axis = 1, args=(persons,)) #Fill in the new columns in cyclists_augmented
 
     #Output a csv, which I then use to get the column names in one column. Next to it I place a column called "Include" which contains
     #0 if I don't think the field is useful and 1 if I do think the field is useful. I saved that csv as "fullyMerged_usefulVars.csv"
-    fullyMerged.to_csv("fullyMerged_20{}.csv".format(YEAR))
+    cyclists_augmented.to_csv("fullyMerged_20{}.csv".format(YEAR))
 
-    removeUnhelpfulColumns(fullyMerged, "fullyMerged_usefulVars.csv", 10)
+    removeUnhelpfulColumns(cyclists_augmented, "fullyMerged_usefulVars.csv", 10)
 
-    print fullyMerged.info()
+    print cyclists_augmented.info()
 
-    allButCategorySplit = addSafetyEQ(fullyMerged, safety_eq)
+    allButCategorySplit = addSafetyEQ(cyclists_augmented, safety_eq)
 
     allButCategorySplit.to_csv("allButCategorySplit_20{}.csv".format(YEAR))
