@@ -9,9 +9,6 @@ def count_unique_values(iterable):
         temp.add(x)
     return len(temp)
 
-def avg(x):
-    return sum(x)/float(len(x))
-
 def get_median_of_sorted(input_list):
     median_index = len(input_list)/2
     return input_list[median_index]
