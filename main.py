@@ -5,7 +5,7 @@ import cProfile
 import matio
 
 def init_argument_parser():
-    parser = argparse.ArgumentParser('Homework 4')
+    parser = argparse.ArgumentParser('CS289 Final Project')
     parser.add_argument('--method', dest='method', type=str,
             default='adaboost', choices=['tree', 'forest', 'adaboost'])
     parser.add_argument('-f', '--forest-size', dest='forest_size', type=int,
