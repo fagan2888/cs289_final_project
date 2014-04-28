@@ -1,13 +1,13 @@
 import argparse
-import decision_trees
 import util
 import cProfile
 import matio
+import logistic_regression, decision_trees
 
 def init_argument_parser():
     parser = argparse.ArgumentParser('CS289 Final Project')
     parser.add_argument('--method', dest='method', type=str,
-            default='forest', choices=['tree', 'forest', 'adaboost'])
+            default='forest', choices=['tree', 'forest', 'adaboost', 'logistic'])
     parser.add_argument('-f', '--forest-size', dest='forest_size', type=int,
             default=1, help='How many trees are in each forest')
     parser.add_argument('-t', '--tree-size', dest='tree_size', type=int, default=0,
@@ -29,9 +29,17 @@ def init_argument_parser():
             default=False, help='Profile running time')
     return vars(parser.parse_args())
 
-if __name__=="__main__":
+def run_logistic_regression(args):
     x_train, x_test, y_train = matio.import_spam_data('spam.mat')
-    args = init_argument_parser()
+    if args['profile']:
+        cProfile.runctx('logistic_regression.assign_labels(x_train, y_train, x_test, lam=100, step_size = 0.0005, iterations=100, k=10)',
+                {'logistic_regression': logistic_regression}, locals())
+    else:
+        logistic_regression.assign_labels(x_train, y_train, x_test, lam=100,
+                step_size = 0.0005, iterations=100, k=10)
+
+def run_decision_trees(args):
+    x_train, x_test, y_train = matio.import_spam_data('spam.mat')
 
     if args['shuffle']:
         x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
@@ -61,7 +69,15 @@ if __name__=="__main__":
         args['tree_size'] = len(crashes)
 
     if args['profile']:
-        cProfile.run('decision_trees.do_stuff(crashes, labels, crashes_validate, labels_validate, x_test, args)')
+        cProfile.runctx('decision_trees.do_stuff(crashes, labels, crashes_validate, labels_validate, x_test, args)', 
+                {'decision_trees': decision_trees}, locals())
     else:
-        decision_trees.do_stuff(crashes, labels, crashes_validate, labels_validate,
-                x_test, args)
+        decision_trees.do_stuff(crashes, labels, crashes_validate,
+                labels_validate, x_test, args)
+
+if __name__=="__main__":
+    args = init_argument_parser()
+    if args['method'] == 'logistic':
+        run_logistic_regression(args)
+    else:
+        run_decision_trees(args)
