@@ -7,7 +7,7 @@ import matio
 def init_argument_parser():
     parser = argparse.ArgumentParser('CS289 Final Project')
     parser.add_argument('--method', dest='method', type=str,
-            default='adaboost', choices=['tree', 'forest', 'adaboost'])
+            default='forest', choices=['tree', 'forest', 'adaboost'])
     parser.add_argument('-f', '--forest-size', dest='forest_size', type=int,
             default=1, help='How many trees are in each forest')
     parser.add_argument('-t', '--tree-size', dest='tree_size', type=int, default=0,
