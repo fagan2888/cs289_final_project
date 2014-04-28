@@ -1,6 +1,7 @@
 import argparse
 import decision_trees
 import util
+import cProfile
 import matio
 
 def init_argument_parser():
