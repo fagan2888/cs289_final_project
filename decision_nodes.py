@@ -16,10 +16,12 @@ class Node(object):
         self.impurity = None
 
     def get_crashes(self):
-        return [Node.crashes[i] for i in self.mi]
+        return Node.crashes[self.mi]
+        #return [Node.crashes[i] for i in self.mi]
 
     def get_labels(self):
-        return [Node.labels[i] for i in self.mi]
+        return Node.labels[self.mi]
+        #return [Node.labels[i] for i in self.mi]
 
     def get_impurity(self):
         if self.impurity is None:
@@ -32,7 +34,7 @@ class Node(object):
         #Caching the most common label to improve performance
         if self.most_common_label is None:
             labels = self.get_labels()
-            spam_count = labels.count(1)
+            spam_count = np.count_nonzero(labels)
             #hardcoded references to labels of 0 and 1. not ideal!
             if spam_count>len(labels)/2.0:
                 self.most_common_label = 1
@@ -74,9 +76,10 @@ class Node(object):
         best_split_value = 0
         best_split_type = -1
         #for each feature
+        crashes_by_feature = np.rollaxis(crashes, 1)
         for i, split_thresholds_i in enumerate(split_thresholds):
             for j, split_value in enumerate(split_thresholds_i):
-                left_spam, left_size, right_spam, right_size = self.split_on_feature_spam_only(i, split_value, crashes, labels)
+                left_spam, left_size, right_spam, right_size = self.split_on_feature_spam_only(i, split_value, crashes_by_feature[i], labels)
                 impurity_drop = calc_impurity_drop_spam_only(current_impurity, left_spam, left_size, right_spam, right_size)
                 #print i, 'impurity drop', impurity_drop, left_spam
                 if impurity_drop>best_impurity_drop:
@@ -134,17 +137,17 @@ class Node(object):
     #To calculate the best split, we don't need the full complexity of the node
     #We just need the impurity of the node, which we can get with just the
     # proportion of spam crashes in the node, which can give us the impurity
-    def split_on_feature_spam_only(self, feature_index, threshold, crashes,
-            labels):
-        left_spam, right_spam = 0, 0
-        left_size, right_size = 0, 0
-        for i, crash in enumerate(crashes):
-            if crash[feature_index]>=threshold:
-                left_spam+=labels[i]
-                left_size+=1
-            else:
-                right_spam+=labels[i]
-                right_size+=1
+    def split_on_feature_spam_only(self, feature_index, threshold, 
+            crashes_by_feature, labels):
+        #print threshold, len(crashes_by_feature)
+        labels_thresholded = labels[crashes_by_feature>=threshold]
+        #print len(labels_thresholded)
+        total = np.sum(labels)
+        left_spam = np.sum(labels_thresholded)
+        right_spam = total - left_spam
+        left_size = len(labels_thresholded)
+        right_size = len(labels) - left_size
+        #print 'total', total, left_spam, right_spam, left_size, right_size
         if left_size:
             left_spam /= float(left_size)
         if right_size:
@@ -169,7 +172,7 @@ def calc_impurity(node_labels, impurity_type='entropy'):
     if len(node_labels)==0:
         return 0
     #proportion of nonspam crashes
-    spam_proportion = node_labels.count(1)/float(len(node_labels))
+    spam_proportion = np.count_nonzero(node_labels)/float(len(node_labels))
     return calc_impurity_spam_only(spam_proportion)
 
 #take as input the proportion of spam in the node

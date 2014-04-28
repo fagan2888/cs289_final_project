@@ -105,7 +105,7 @@ def predict_label_forest(forest, crash):
     for tree in forest:
         predicted_labels.append(tree.predicted_label(crash))
     #Interestingly, > gives better performance than >=
-    if predicted_labels.count(1) > len(predicted_labels)/2:
+    if np.count_nonzero(predicted_labels) > len(predicted_labels)/2:
         return 1
     return 0
 
