@@ -1,4 +1,4 @@
-import sys, numpy as np, pandas as pd
+import numpy as np, pandas as pd
 from copy import deepcopy
 
 my_data=[['slashdot','USA','yes',18,'None'],
@@ -429,6 +429,30 @@ def countNodes(tree):
         return countNodes(tree.tb) + countNodes(tree.fb)
     else:
         return 1
+
+def fetchNodes(tree):
+    """Returns a list containing one list per node of the conditions, in order, that need to be met to end up in a particular
+    node."""
+    if tree.results is None: #Check if the node is a branch
+        condItems = {} #Initialize a container for the node conditions from lower branches
+        v = ["true", "false"] #"Veracity values"
+        for branch, veracity in [(tree.tb, v[0]), (tree.fb, v[1])]: #iterate over this node's true and false child nodes
+            lower_results = fetchNodes(branch)
+            if len(lower_results) == 1: #Check if child node is actually a leaf. If so,
+                lower_results.insert(0, (tree.col, tree.value, veracity))
+                condItems[veracity] = [lower_results] #Initialize the condition needed to reach that leaf
+            else:
+                condItems[veracity] = [] #If the child is not a leaf, initialize an empty list to contain its updated conditions
+                for item in lower_results: #Iterate over each set of node conditions that stem from this branch
+                    new_descriptor = deepcopy(item) #make a deep copy of the list of node conditions from the lower level nodes
+                    #insert this node's condition at the beginning of each of the node conditions from the lower levels
+                    new_descriptor.insert(0, (tree.col, tree.value, veracity)) 
+                    condItems[veracity].append(new_descriptor) #append the updated set of node conditions to the branches items
+        node_conditions = deepcopy(condItems[v[0]]) #Initialize the complete list of node conditions that stem from this node
+        node_conditions.extend(deepcopy(condItems[v[1]])) #Add the node conditions from the second branch of this node
+        return node_conditions #Send the full set of node conditions from this node up to the higher nodes.
+    else: #If the node is a leaf, return the dictionary of results
+        return [tree.results]
 
 def forestPandas(data, resCol, maxDepth=None, percentage=70, numfeats = 15, fsize=5, selected=None):
     """data = a pandas dataframe of the feature vectors and the class.
