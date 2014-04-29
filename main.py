@@ -37,12 +37,11 @@ def init_argument_parser():
 
 def run_logistic_regression(args):
     x_train, y_train = util.import_cyclist_data(args['input'])
-    x_test = None
     if args['profile']:
         cProfile.runctx('logistic_regression.assign_labels(x_train, y_train, x_test, lam=100, step_size = 0.0005, iterations=100, k=10)',
                 {'logistic_regression': logistic_regression}, locals())
     else:
-        logistic_regression.assign_labels(x_train, y_train, x_test,
+        logistic_regression.assign_labels(x_train, y_train,
                 lam=args['lambda'], step_size = args['step_size'],
                 iterations=args['iterations'], k=10)
 
