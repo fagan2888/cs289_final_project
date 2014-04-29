@@ -1,6 +1,7 @@
 import bisect
 import random
 import numpy as np
+import cPickle
 
 def count_unique_values(iterable):
     temp = set()
@@ -66,3 +67,16 @@ def printf(float_list):
 
 def prettyf(num):
     return "%0.2e" % num
+
+def import_cyclist_data(input_filename):
+    input_file = open(input_filename, 'rb')
+    #pandas dataframe
+    df = cPickle.load(input_file)
+    print df.values.shape
+    y = df['SER_INJ'].values
+    df = df.drop('SER_INJ', 1)
+    #print df.info()
+    x = df.values
+    print x.shape
+    return x, y
+    
