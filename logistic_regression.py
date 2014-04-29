@@ -262,7 +262,7 @@ def find_approximate_C_exp(images, labels, k, exp_range, **kwargs):
 #All x and y data here comes from a training set
 #the _train and _test labels are used in the context of the cross-validation
 def cross_validate(x_full, y_full, lam, step_size, iterations, weight_step,
-        k=10):
+        k):
     #shuffle x_full and y_full so we can crossvalidate
     x_full, y_full = shuffle(x_full, y_full)
     beta_all = list()
