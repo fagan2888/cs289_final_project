@@ -43,15 +43,15 @@ def run_logistic_regression(args):
     else:
         logistic_regression.assign_labels(x_train, y_train,
                 lam=args['lambda'], step_size = args['step_size'],
-                iterations=args['iterations'], k=10)
+                iterations=args['iterations'], weight_step = True,
+                k=10)
 
 def run_decision_trees(args):
-    x_train, x_test, y_train = matio.import_spam_data('spam.mat')
+    x_train, y_train = util.import_cyclist_data(args['input'])
+    #x_train, x_test, y_train = matio.import_spam_data('spam.mat')
 
     if args['shuffle']:
         x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
-    else:
-        y_train = list(y_train)
 
     if args['validate']>0:
         validation_size = args['validate']
@@ -71,6 +71,8 @@ def run_decision_trees(args):
         labels = y_train[-validation_size:]
         crashes_validate = crashes
         labels_validate = labels
+
+    x_test = crashes_validate
 
     if args['tree_size']==0:
         args['tree_size'] = len(crashes)
