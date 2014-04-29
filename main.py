@@ -33,6 +33,8 @@ def init_argument_parser():
             default=100, help='iterations to run the chosen algorithm')
     parser.add_argument('--profile', dest='profile', action='store_true',
             default=False, help='Profile running time')
+    parser.add_argument('-k', '--k-folds', dest='k', type=int, default=10,
+            help='Number of k folds to use for cross validation')
     return vars(parser.parse_args())
 
 def run_logistic_regression(args):
@@ -44,7 +46,7 @@ def run_logistic_regression(args):
         logistic_regression.assign_labels(x_train, y_train,
                 lam=args['lambda'], step_size = args['step_size'],
                 iterations=args['iterations'], weight_step = True,
-                k=10)
+                k=args['k'])
 
 def run_decision_trees(args):
     x_train, y_train = util.import_cyclist_data(args['input'])
