@@ -1,5 +1,4 @@
 import argparse
-import cPickle
 import cProfile
 import util
 import matio
@@ -33,7 +32,8 @@ def init_argument_parser():
     return vars(parser.parse_args())
 
 def run_logistic_regression(args):
-    x_train, x_test, y_train = matio.import_spam_data('spam.mat')
+    x_train, y_train = util.import_cyclist_data(args['input'])
+    x_test = None
     if args['profile']:
         cProfile.runctx('logistic_regression.assign_labels(x_train, y_train, x_test, lam=100, step_size = 0.0005, iterations=100, k=10)',
                 {'logistic_regression': logistic_regression}, locals())
