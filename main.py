@@ -1,6 +1,7 @@
 import argparse
-import util
+import cPickle
 import cProfile
+import util
 import matio
 import logistic_regression, decision_trees
 
@@ -21,8 +22,10 @@ def init_argument_parser():
             help='Randomize the order of the crashes and labels?')
     parser.add_argument('-v', '--validate', dest='validate', type=int, 
             default = 500, help = 'Split the data into a training set and a validation set of the given size')
-    parser.add_argument('-i', '--iter-validate', dest='iter_validate', type=int,
+    parser.add_argument('--iter-validate', dest='iter_validate', type=int,
             default=50, help='Iteratively validate AdaBoost results after the given number of rounds')
+    parser.add_argument('-i', '--input', dest='input', type=str,
+            default='dataframes/design_DF_4Tree.pkl')
     parser.add_argument('-o', '--output', dest='output', type=str,
             default=None, help='Filename to output test results')
     parser.add_argument('--profile', dest='profile', action='store_true',
