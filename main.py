@@ -16,7 +16,7 @@ def init_argument_parser():
             help='How many rounds to run the adaboost algorithm')
     parser.add_argument('-a', '--ada-size', dest='ada_size', type=int, default=1,
             help='The number of adaboost implementations to run')
-    parser.add_argument('-s', '--shuffle', dest='shuffle', type=int,
+    parser.add_argument('--shuffle', dest='shuffle', type=int,
             default=1,
             help='Randomize the order of the crashes and labels?')
     parser.add_argument('-v', '--validate', dest='validate', type=int, 
@@ -27,6 +27,10 @@ def init_argument_parser():
             default='dataframes/design_DF_4Tree.pkl')
     parser.add_argument('-o', '--output', dest='output', type=str,
             default=None, help='Filename to output test results')
+    parser.add_argument('-l', '--lambda', dest='lambda', type=float,
+            default=100, help='lambda used for logistic regression')
+    parser.add_argument('-s', '--step-size', dest='step_size', type=float,
+            default=0.1, help='step size used for logistic regression')
     parser.add_argument('--profile', dest='profile', action='store_true',
             default=False, help='Profile running time')
     return vars(parser.parse_args())
@@ -38,8 +42,8 @@ def run_logistic_regression(args):
         cProfile.runctx('logistic_regression.assign_labels(x_train, y_train, x_test, lam=100, step_size = 0.0005, iterations=100, k=10)',
                 {'logistic_regression': logistic_regression}, locals())
     else:
-        logistic_regression.assign_labels(x_train, y_train, x_test, lam=100,
-                step_size = 0.0005, iterations=100, k=10)
+        logistic_regression.assign_labels(x_train, y_train, x_test,
+                lam=args['lambda'], step_size = args['step_size'], iterations=100, k=10)
 
 def run_decision_trees(args):
     x_train, x_test, y_train = matio.import_spam_data('spam.mat')
