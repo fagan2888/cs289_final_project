@@ -236,7 +236,7 @@ def do_stuff(crashes, labels, crashes_validate, labels_validate, x_test, args):
 
         error_rate, predictions =  calc_error_rate_adaboost(adaboosts, 
                     crashes_validate, labels_validate)
-        print '@t', args['rounds'], 'error rate', error_rate
+        print '@t', args['iterations'], 'error rate', error_rate
         if args['output']:
             assign_labels_adaboost(forests, alpha, x_test,
                     args['output'])
