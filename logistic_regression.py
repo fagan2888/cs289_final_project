@@ -3,6 +3,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as pyplot
 import random
+import util
 
 def init_argument_parser():
     parser = argparse.ArgumentParser('Homework 4')
@@ -131,10 +132,7 @@ def calc_beta(beta, step_size, gradient, iteration=0, scale_step_size=False):
     return np.subtract(beta,step_size*gradient)
 
 #calculating nll is not always necessary, and is huge performance killer
-def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step, should_calc_nll=False):
-    feature_count = len(x[0])
-    beta = [0 for i in xrange(feature_count)]
-    nll = [-1 for i in xrange(iterations)]
+def run_batch_gradient_descent(nll, beta, x, y, lam, step_size, iterations, weight_step, should_calc_nll=False):
     mu = calc_mu(x, beta)
     if should_calc_nll:
         nll[0] = calc_nll(x, y, beta, mu, lam)
@@ -144,7 +142,6 @@ def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step, sh
         mu = calc_mu(x, beta)
         if should_calc_nll:
             nll[i] = calc_nll(x, y, beta, mu, lam)
-    return nll, beta
 
 #nll_limit limits the frequency with which we calculate the NLL
 #Useful because it crushes performance and we only need to understand
@@ -156,7 +153,7 @@ def run_stochastic_gradient_descent(x, y, lam, step_size, iterations,
     beta = [0 for i in xrange(feature_count)]
     nll = list()
     for loop in xrange(iterations/data_count+1):
-        x, y = shuffle(x, y)
+        x, y = util.shuffle(x, y)
         x_curr = x[0]
         y_curr = y[0]
         mu = calc_mu(x, beta)
@@ -236,18 +233,6 @@ def plot_stochastic_gradient_descent(x_train, y_train, lam=100,
     plot_nll_data(nll_std, label='standardized', show=False)
     plot_nll_data(nll_log, label='log transformed')
 
-#shuffle two lists in the same way
-def shuffle(list1, list2):
-    if not len(list1)==len(list2):
-        print 'Error: lists not of equal size'
-        print len(list1), len(list2)
-        return False
-    image_count=len(list1)
-    combined = zip(list1,list2)
-    random.shuffle(combined)
-    list1_shuffled, list2_shuffled = zip(*combined)
-    return list1_shuffled, list2_shuffled
-
 def extract_fold(folded_list, fold_index, fold_count):
     length = len(folded_list)
     fold_start = (fold_index*length)/fold_count
@@ -264,18 +249,19 @@ def find_approximate_C_exp(images, labels, k, exp_range, **kwargs):
 def cross_validate(x_full, y_full, lam, step_size, iterations, weight_step,
         k):
     #shuffle x_full and y_full so we can crossvalidate
-    x_full, y_full = shuffle(x_full, y_full)
-    beta_all = list()
-    error_rates = list()
+    feature_count = len(x_full[0])
+    x_full, y_full = util.shuffle(x_full, y_full)
+    beta_all = np.empty(shape=(k, feature_count))
+    error_rates = np.empty(shape=k)
+    nll = np.empty(shape=(k, iterations))
     for i in xrange(k):
         x_train, x_test = extract_fold(x_full, i, k)
         y_train, y_test = extract_fold(y_full, i, k)
-        nll, beta = run_batch_gradient_descent(x_train, y_train, lam,
+        run_batch_gradient_descent(nll[i], beta_all[i], x_train, y_train, lam,
                 step_size, iterations, weight_step)
-        test_labels_calc = calc_labels(x_test, beta)
-        error_rates.append(calc_error_rate(test_labels_calc, y_test))
+        test_labels_calc = calc_labels(x_test, beta_all[i])
+        error_rates[i] = calc_error_rate(test_labels_calc, y_test)
         print 'error rate', error_rates[i]
-        beta_all.append(beta)
     beta_all = sum(beta_all)/float(len(beta_all))
     print 'avg error rate', sum(error_rates)/float(len(error_rates))
     return beta_all
@@ -288,7 +274,7 @@ def assign_labels(x_train, y_train, lam, step_size,
     x_train = log_transform_data(x_train)
 
     beta = cross_validate(x_train, y_train, lam, step_size, iterations,
-            weight_step)
+            weight_step, k)
 
     labels_calc_train = calc_labels(x_train, beta)
     print 'training error rate', calc_error_rate(labels_calc_train,
