@@ -12,8 +12,6 @@ def init_argument_parser():
             default=1, help='How many trees are in each forest')
     parser.add_argument('-t', '--tree-size', dest='tree_size', type=int, default=0,
             help='The number of elements in each tree (NOT tree depth)')
-    parser.add_argument('-r', '--rounds', dest='rounds', type=int, default=500,
-            help='How many rounds to run the adaboost algorithm')
     parser.add_argument('-a', '--ada-size', dest='ada_size', type=int, default=1,
             help='The number of adaboost implementations to run')
     parser.add_argument('--shuffle', dest='shuffle', type=int,
@@ -23,14 +21,16 @@ def init_argument_parser():
             default = 500, help = 'Split the data into a training set and a validation set of the given size')
     parser.add_argument('--iter-validate', dest='iter_validate', type=int,
             default=50, help='Iteratively validate AdaBoost results after the given number of rounds')
-    parser.add_argument('-i', '--input', dest='input', type=str,
+    parser.add_argument('--input', dest='input', type=str,
             default='dataframes/design_DF_4Tree.pkl')
-    parser.add_argument('-o', '--output', dest='output', type=str,
+    parser.add_argument('--output', dest='output', type=str,
             default=None, help='Filename to output test results')
     parser.add_argument('-l', '--lambda', dest='lambda', type=float,
             default=100, help='lambda used for logistic regression')
     parser.add_argument('-s', '--step-size', dest='step_size', type=float,
             default=0.1, help='step size used for logistic regression')
+    parser.add_argument('-i', '--iterations', dest='iterations', type=int,
+            default=100, help='iterations to run the chosen algorithm')
     parser.add_argument('--profile', dest='profile', action='store_true',
             default=False, help='Profile running time')
     return vars(parser.parse_args())
@@ -43,7 +43,8 @@ def run_logistic_regression(args):
                 {'logistic_regression': logistic_regression}, locals())
     else:
         logistic_regression.assign_labels(x_train, y_train, x_test,
-                lam=args['lambda'], step_size = args['step_size'], iterations=100, k=10)
+                lam=args['lambda'], step_size = args['step_size'],
+                iterations=args['iterations'], k=10)
 
 def run_decision_trees(args):
     x_train, x_test, y_train = matio.import_spam_data('spam.mat')
