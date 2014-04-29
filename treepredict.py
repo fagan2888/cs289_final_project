@@ -1,4 +1,5 @@
 import sys, numpy as np, pandas as pd
+from copy import deepcopy
 
 my_data=[['slashdot','USA','yes',18,'None'],
          ['google','France','yes',23,'Premium'],
@@ -27,6 +28,7 @@ class decisionNode:
         self.tb = tb #a tree grown on data meeting this node's splitting condition
         self.fb = fb #a tree grown on data failing this node's splitting condition
         return None
+
         
 def divideset(rows, column, value):
     """rows = the array of observations
@@ -288,22 +290,146 @@ def buildTreePandas(rows, res, maxDepth=None, scoref=entropy, depth=0):
         tb=trueBranch,fb=falseBranch)
     else:
         return decisionNode(results=uniqueCountsPandas(rows, res))
-        
-        
-def searchFeats(tree, topFeatures=set()):
+               
+def searchFeats(tree):
     """tree= a completely built tree.
-    topFeatures = an internal variable. Do not alter.
     ==========
     Returns a set of all the features actually used in the tree's branching.
     This function is used on an unpruned tree to identify relevant features."""
-    if tree.results == None:
-        topFeatures.add(tree.col)
-        topFeatures.union(searchFeats(tree.tb))
-        topFeatures.union(searchFeats(tree.fb))
-        return topFeatures
-    else:
+    if tree.results is None:
+        #If I am at the branch, return my branching column and the columns of my
+        #descendant branches.
+        return set([tree.col]).union(searchFeats(tree.tb)).union(searchFeats(tree.fb))
+    else: #If I am at a leaf, return an empty set
         return set()
+      
+def testAccuracy(testSet, tree, classes, res):
+    preds = [] #Initialize an empty list to hold the predictions
+    actual = np.array(testSet[res]) #Get the actual array of class labels
+    for ind, row in testSet.iterrows(): #Iterate over all rows of the test data
+        preds.append(predictWithTree(row, tree, classes)) #Make predictions on the test data
+    preds = np.array(preds) #make predictions an array
+    numWrong = 0 #Initialize the number of wrong predictions
+    for i in range(len(preds)): #Iterate over all of the predictions and actual labels
+        if preds[i] != actual[i]: #Check to see if the predictions are not the same.
+            numWrong += 1 #If the predictions are not the same, increment numWrong by one
+    return 1 - float(numWrong)/len(testSet) #Return the accuracy of the tree's predictions.
+    
+def get_results(node):
+    """node = a particular decisionNode from a decision tree.
+    ==========
+    Returns a dictionary which has labels as keys, and the number of training observations with said label that made it to this 
+    node."""
+    if node.results is not None: #Check if the node is a leaf.
+        return node.results #If the node is a leaf, then just return its results
+    else: #If the node is not a leaf, recursively combine the results from its branches.
+        tbr = get_results(node.tb) #get the results from the true branch
+        fbr = get_results(node.fb) #get the results from the false branch
+    
+    new_results = deepcopy(tbr) #make a deep copy of the results from the true branch
+    for key in fbr: #Iterate through the keys in the false branch
+        if key not in new_results: #Check whether or not the key is in the deep copy of the true branch
+            new_results[key] = fbr[key] #If it is not, add the key to the deep copy, and make its value equal to the value in fbr
+        else: #If the key is in the deep copy of the true branch, add the false branch's count to the value in the deep copy
+            new_results[key] = fbr[key] + new_results[key]
+    return new_results #return the merged results from the false and true branches
+
+def count_errors(node, testSet, res):
+    """node = a particular decisionNode from within a given tree.
+    testSet = the pandas dataframe of testing observations that would make it to this node
+    res = the name of the column of results within the testSet dataframe.
+    ==========
+    Treats the node as a leaf and returns the number of testSet observations that would be misclassified on the basis of
+    having made it to this node."""
+    training_results = get_results(node) #Get a dictionary of labels and counts for the *training* data which made it to this node
+    leaf_label = None #Initialize a label for this leaf
+    majority_count = 0 #Initialize a variable to track the number of observations for the label with the most observations
+    #Note that the steps below do not handle ties of the majority count in a nice way.
+    for label, count in training_results.items(): #iterate through each pair of labels and counts from the training set
+        if count > majority_count: #find the label with the highest count
+            leaf_label = label #the label for the leaf is the label with the highest count
+            majority_count = count #keep track of the count for the leaf_label
+    
+    wrong_labels = testSet[res].unique().tolist() #initialize wrong_labels to be all labels in the testSet
+    if leaf_label in wrong_labels: #If the leaf label is in the list of labels for the part of the test set that got to this node
+        wrong_labels.remove(leaf_label) #remove the leaf_label so that all which remains are incorrect labels
+    
+    wrong_count = 0 #Initialize a count of how many testSet observations will be classified incorrectly
+    testCounts = testSet.groupby(res).size() #Get a series of the testSet labels and how many observations pertain to each label
+    for label in wrong_labels: #Iterate over all the labels not equal to the leaf_label
+        wrong_count += testCounts[label] #Sum up all of the observations with a label not equal to the leaf_label
+    return wrong_count
+    
+def deep_count_errors(node, testSet, res):
+    """node = a particular decisionNode from within a given tree.
+    testSet = the pandas dataframe of testing observations that would make it to this node
+    res = the name of the column of results within the testSet dataframe.
+    ==========
+    Distinguishes between branch nodes and leaf nodes. For leaf nodes, it returns the number of testSet observations that would be 
+    misclassified on the basis of having made it to this node. For branch nodes, it returns the total number of observations that
+    would be misclassified after making it to this node and being further classified by its descendant leaf nodes."""
+    if node.results is not None: #Check if this node is a leaf node
+        return count_errors(node, testSet, res) #If so, return the test set classification errors made by this node.
+    else:
+        tbSet = testSet[testSet[node.col] >= node.value] #find which test observations belong to this tree's true branch
+        fbSet = testSet[testSet[node.col] < node.value] #find which test observations belong to this tree's false branch
         
+        if node.tb.results is None: #Check if the true branch is a branch node
+            #If so, get the count of all misclassifications made by this branch's descendent leaf nodes on the test observations
+            term1 = deep_count_errors(node.tb, tbSet, res)
+        else: #If the true branch is a leaf node, return the count of all test set classification errors made by the leaf.
+            term1 = count_errors(node.tb, tbSet,res)
+        if node.fb.results is None: #Check if the false branch is a branch node
+            #If so, get the count of all misclassifications made by this branch's descendent leaf nodes on the test observations
+            term2 = deep_count_errors(node.fb, fbSet, res)
+        else: #If the false branch is a leaf node, return the count of all test set classification errors made by the leaf.
+            term2 = count_errors(node.fb, fbSet, res) 
+        return term1 + term2 #Sum the classification errors made by this nodes descendant leaves.
+
+def prune(tree, testSet, res, technique):
+    """tree = a decision tree to be pruned
+    testSet = a pandas dataframe of observations and labels that were not used to train the tree
+    res = the column name of the results column
+    technique = a string indicating what pruning technique to use. Options include: "reduced_error".
+    ==========
+    Returns a decision tree that has been pruned according to a given pruning technique."""
+    assert technique in ["reduced_error"]
+    if technique == "reduced_error":
+        tbSet = testSet[testSet[tree.col] >= tree.value] #find which test observations belong to this tree's true branch
+        fbSet = testSet[testSet[tree.col] < tree.value] #find which test observations belong to this tree's false branch
+        
+        if tree.tb.results is None: #Check if the true branch of this sub-tree is a leaf
+            ptb = prune(tree.tb, tbSet, res, technique) #If not, recursively travel down the true branch and prune it.
+        else:
+            ptb = tree.tb #If the true branch is a leaf, then the true branch has--in essence--already been pruned.
+        if tree.fb.results is None: #Check if the false branch of this sub-tree is a leaf
+            pfb = prune(tree.fb, fbSet, res, technique) #If not, recursively travel down the false branch and prune it.
+        else:
+            pfb = tree.fb #If the false branch is a leaf, then the false branch has--in essence--already been pruned.
+        
+        #Sum the number of misclassifications of the test data at each of the leaves of this node
+        wrong_in_leaves = deep_count_errors(ptb, tbSet, res) + deep_count_errors(pfb, fbSet, res)
+            
+        #Count the number of misclassificationsof the test data that would occur if this node were treated as a leaf
+        wrong_at_node = count_errors(tree, testSet, res)
+        
+        #Assess whether or not treating the node as a leaf improves the accuracy on the test set
+        if wrong_at_node <= wrong_in_leaves: 
+            #NOTE:The following line of code seems slightly redundant since count_errors(tree, testSet, res) had to call 
+            #get_results(tree). I should set up some way to save the output of that function call instead of calling it twice.
+            return decisionNode(results = get_results(tree)) #If so, return a decisionNode where the node is a leaf
+        else:
+            #If not, return a decisionNode where the node splits on the same column and value as before, but the 
+            #true and false branches are the pruned-versions of the original true and false branches. See above for
+            #definition of ptb and pfb
+            return decisionNode(col = tree.col, value = tree.value, tb = ptb, fb = pfb)                  
+
+def countNodes(tree):
+    if tree.results is None:
+        return countNodes(tree.tb) + countNodes(tree.fb)
+    else:
+        return 1
+
 def forestPandas(data, resCol, maxDepth=None, percentage=70, numfeats = 15, fsize=5, selected=None):
     """data = a pandas dataframe of the feature vectors and the class.
     resCol = the string or number that names the column of results in 'data'.
@@ -346,7 +472,3 @@ def ensembleVote(x, classes, ensemble):
             loc = ind
     prediction = classes[loc]
     return prediction
-#print giniImpurity(my_data)
-#print entropy(my_data)
-#tree = buildTree(my_data)
-#printtree(tree)
