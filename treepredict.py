@@ -1,23 +1,6 @@
 import numpy as np, pandas as pd
 from copy import deepcopy
-
-my_data=[['slashdot','USA','yes',18,'None'],
-         ['google','France','yes',23,'Premium'],
-         ['digg','USA','yes',24,'Basic'],
-         ['kiwitobes','France','yes',23,'Basic'],
-         ['google','UK','no',21,'Premium'],
-         ['(direct)','New Zealand','no',12,'None'],
-         ['(direct)','UK','no',21,'Basic'],
-         ['google','USA','no',24,'Premium'],
-         ['slashdot','France','yes',19,'None'],
-         ['digg','USA','no',18,'None'],
-         ['google','UK','no',18,'None'],
-         ['kiwitobes','UK','no',19,'None'],
-         ['digg','New Zealand','yes',12,'Basic'],
-         ['slashdot','UK','no',21,'None'],
-         ['google','UK','yes',18,'Basic'],
-         ['kiwitobes','France','yes',19,'Basic']]
-
+    
 class decisionNode:
     def __init__(self, col= -1, value = None, results = None, tb = None, fb = None):
         self.col = col #col is the column that the tree splits on at this node
@@ -30,7 +13,7 @@ class decisionNode:
         return None
 
         
-def divideset(rows, column, value):
+def __divideset(rows, column, value):
     """rows = the array of observations
     column = the column of the feature vector to split the data on
     value = the value within column to split the data on.
@@ -52,7 +35,7 @@ def divideset(rows, column, value):
     set2 = [row for row in rows if not split_function(row)]
     return (set1, set2)
 
-def dividePandas(df, column, value):
+def __dividePandas(df, column, value):
     """df = a Pandas dataframe containing the observations used to build the CART
     column = the column the df is being split on.
     value = the value within column that the df is being split on.
@@ -68,7 +51,7 @@ def dividePandas(df, column, value):
         set2 = df[df[column] != value] #Observations not equal to value are in set2 
     return (set1, set2)
     
-def uniqueCounts(rows):
+def __uniqueCounts(rows):
     """rows = a list of lists where the inner lists represent a row of data.
     Returns a dictionary of the results within "rows." The keys will be the 
     unique values within the "rows" results column. The values will be how many
@@ -81,7 +64,7 @@ def uniqueCounts(rows):
         results[r] += 1 #Increment the count for this row's class by 1
     return results
 
-def uniqueCountsPandas(df, resCol):
+def __uniqueCountsPandas(df, resCol):
     """df = the dataframe of data.
     resCol = the column name to get the results from.
     =========
@@ -95,16 +78,16 @@ def giniImpurity(rows, resCol=None):
     pandas dataframe.
     resCol = None to use pure python to calculate gini Impurity OR
     restCol = a string denoting the column of results that you want to use with the 
-    uniqueCountsPandas function to calculate gini-Impurity
+    __uniqueCountsPandas function to calculate gini-Impurity
     ==========
     Returns the giniImpurity of a given dataset."""
     if not resCol: #create the dictionary of counts for each class using pure python
         total = len(rows)
-        counts = uniqueCounts(rows)
+        counts = __uniqueCounts(rows)
     else: #Create the dictionary of counts for each class using pandas.
         assert 'index' in dir(rows)
         total = len(rows)
-        counts = uniqueCountsPandas(rows, resCol)
+        counts = __uniqueCountsPandas(rows, resCol)
     imp = 1 #Initialize the gini-impurity at 1
     #Implement the formula for calculating gini-impurity
     fracs = [float(x)/total for x in counts.values()]
@@ -117,17 +100,17 @@ def entropy(rows, resCol = None):
     pandas dataframe.
     resCol = None to use pure python to calculate gini Impurity OR
     restCol = a string denoting the column of results that you want to use with the 
-    uniqueCountsPandas function to calculate gini-Impurity
+    __uniqueCountsPandas function to calculate gini-Impurity
     ==========
     Returns the entropy of a given dataset."""
     from math import log
     if not resCol: #create the dictionary of counts for each class using pure python
         total = len(rows)
-        counts = uniqueCounts(rows)
+        counts = __uniqueCounts(rows)
     else: #Create the dictionary of counts for each class using pandas.
         assert 'index' in dir(rows)
         total = len(rows.index)
-        counts = uniqueCountsPandas(rows, resCol)
+        counts = __uniqueCountsPandas(rows, resCol)
     log2 = lambda x:log(x)/log(2) #Create a function to take log-base 2 of a number
     ent = 0 #Initialize the entropy at zero
     #Implement the formula for entropy, using log-base2
@@ -150,7 +133,7 @@ def buildTree(rows, maxDepth = None, scoref=entropy, depth = 0):
     newDepth = depth + 1 #Calculate the depth of the next split.
     #Check if the depth at the next split is greater than a maximum specified depth
     if (maxDepth == 0 or maxDepth) and (newDepth > maxDepth): 
-        return decisionNode(results=uniqueCounts(rows)) #If so, stop splitting.
+        return decisionNode(results=__uniqueCounts(rows)) #If so, stop splitting.
     current_score=scoref(rows) #Calculate the current value of the score function.
     # Set up some variables to track the best criteria
     best_gain=0.0 #Initialize a value for the best gain from all possible splits
@@ -167,7 +150,7 @@ def buildTree(rows, maxDepth = None, scoref=entropy, depth = 0):
             column_values[row[col]]=1
         # Divide the dataset on each value in this column.
         for value in column_values.keys( ):
-            (set1,set2)=divideset(rows,col,value)
+            (set1,set2)=__divideset(rows,col,value)
             #Calculate the fraction of data in the true branch
             p=float(len(set1))/len(rows) 
             #Calculate the gain on the chosen score function using this split.
@@ -184,7 +167,7 @@ def buildTree(rows, maxDepth = None, scoref=entropy, depth = 0):
         return decisionNode(col=best_criteria[0],value=best_criteria[1],
         tb=trueBranch,fb=falseBranch)
     else:
-        return decisionNode(results=uniqueCounts(rows))
+        return decisionNode(results=__uniqueCounts(rows))
 
 def printtree(tree,indent=''):
     # Is this a leaf node?
@@ -243,7 +226,7 @@ def predictWithTree(observation, tree, classes):
     probs= classProbs(observation,tree, classes)
     return classes[np.argmax(probs)] 
     
-def buildTreePandas(rows, res, maxDepth=None, scoref=entropy, depth=0):
+def buildTreePandas(rows, res, min_ppl = None, maxDepth=None, scoref=entropy, depth=0):
     """rows = a list of lists where the inner lists represent a row of data.
     res = the column name of results
     maxDepth = the maximum number of splits between the root node and a leaf node.
@@ -252,12 +235,18 @@ def buildTreePandas(rows, res, maxDepth=None, scoref=entropy, depth=0):
     depth = current depth of the tree. Used internally, do not alter.
     ==========
     Returns a decision tree of the specified maximum depth."""
-    if len(rows)==0: 
+    minimum_ppl = deepcopy(min_ppl)
+    num_ppl = len(rows)
+    
+    if min_ppl is not None and num_ppl <= min_ppl:
+        #Extra protection to stop the recursion
+        return decisionNode(results=__uniqueCountsPandas(rows, res)) 
+    if num_ppl==0: 
         return decisionNode( )
     newDepth = depth + 1
     if (maxDepth == 0 or maxDepth) and (newDepth > maxDepth):
         #print "Hooray I got here."
-        return decisionNode(results=uniqueCountsPandas(rows, res))
+        return decisionNode(results=__uniqueCountsPandas(rows, res))
     current_score=scoref(rows, resCol = res)
     # Set up some variables to track the best criteria
     best_gain=0.0
@@ -274,22 +263,23 @@ def buildTreePandas(rows, res, maxDepth=None, scoref=entropy, depth=0):
         # in this column
         copy = rows.sort(columns = col)
         for value in column_values:
-            (set1,set2)=dividePandas(copy,col,value)
+            (set1,set2)=__dividePandas(copy,col,value)
             # Information gain
             p=float(len(set1))/len(rows)
             gain=current_score-p*scoref(set1, resCol = res)-(1-p)*scoref(set2, resCol = res)
-            if gain>best_gain and len(set1)>0 and len(set2)>0:
+            size_min = 0 if minimum_ppl is None else minimum_ppl - 1
+            if gain>best_gain and len(set1)>size_min and len(set2)>size_min:
                 best_gain=gain
                 best_criteria=(col,value)
                 best_sets=(set1,set2)
     # Create the subbranches
     if best_gain>0:
-        trueBranch=buildTreePandas(best_sets[0], res, maxDepth = maxDepth, depth=newDepth)
-        falseBranch=buildTreePandas(best_sets[1], res, maxDepth = maxDepth, depth=newDepth)
+        trueBranch=buildTreePandas(best_sets[0], res, min_ppl = minimum_ppl, maxDepth = maxDepth, depth=newDepth)
+        falseBranch=buildTreePandas(best_sets[1], res, min_ppl = minimum_ppl, maxDepth = maxDepth, depth=newDepth)
         return decisionNode(col=best_criteria[0],value=best_criteria[1],
-        tb=trueBranch,fb=falseBranch)
+                            tb=trueBranch,fb=falseBranch)
     else:
-        return decisionNode(results=uniqueCountsPandas(rows, res))
+        return decisionNode(results=__uniqueCountsPandas(rows, res))
                
 def searchFeats(tree):
     """tree= a completely built tree.
@@ -315,7 +305,7 @@ def testAccuracy(testSet, tree, classes, res):
             numWrong += 1 #If the predictions are not the same, increment numWrong by one
     return 1 - float(numWrong)/len(testSet) #Return the accuracy of the tree's predictions.
     
-def get_results(node):
+def __get_results(node):
     """node = a particular decisionNode from a decision tree.
     ==========
     Returns a dictionary which has labels as keys, and the number of training observations with said label that made it to this 
@@ -323,8 +313,8 @@ def get_results(node):
     if node.results is not None: #Check if the node is a leaf.
         return node.results #If the node is a leaf, then just return its results
     else: #If the node is not a leaf, recursively combine the results from its branches.
-        tbr = get_results(node.tb) #get the results from the true branch
-        fbr = get_results(node.fb) #get the results from the false branch
+        tbr = __get_results(node.tb) #get the results from the true branch
+        fbr = __get_results(node.fb) #get the results from the false branch
     
     new_results = deepcopy(tbr) #make a deep copy of the results from the true branch
     for key in fbr: #Iterate through the keys in the false branch
@@ -334,14 +324,14 @@ def get_results(node):
             new_results[key] = fbr[key] + new_results[key]
     return new_results #return the merged results from the false and true branches
 
-def count_errors(node, testSet, res):
+def __count_errors(node, testSet, res):
     """node = a particular decisionNode from within a given tree.
     testSet = the pandas dataframe of testing observations that would make it to this node
     res = the name of the column of results within the testSet dataframe.
     ==========
     Treats the node as a leaf and returns the number of testSet observations that would be misclassified on the basis of
     having made it to this node."""
-    training_results = get_results(node) #Get a dictionary of labels and counts for the *training* data which made it to this node
+    training_results = __get_results(node) #Get a dictionary of labels and counts for the *training* data which made it to this node
     leaf_label = None #Initialize a label for this leaf
     majority_count = 0 #Initialize a variable to track the number of observations for the label with the most observations
     #Note that the steps below do not handle ties of the majority count in a nice way.
@@ -360,7 +350,7 @@ def count_errors(node, testSet, res):
         wrong_count += testCounts[label] #Sum up all of the observations with a label not equal to the leaf_label
     return wrong_count
     
-def deep_count_errors(node, testSet, res):
+def __deep_count_errors(node, testSet, res):
     """node = a particular decisionNode from within a given tree.
     testSet = the pandas dataframe of testing observations that would make it to this node
     res = the name of the column of results within the testSet dataframe.
@@ -369,21 +359,21 @@ def deep_count_errors(node, testSet, res):
     misclassified on the basis of having made it to this node. For branch nodes, it returns the total number of observations that
     would be misclassified after making it to this node and being further classified by its descendant leaf nodes."""
     if node.results is not None: #Check if this node is a leaf node
-        return count_errors(node, testSet, res) #If so, return the test set classification errors made by this node.
+        return __count_errors(node, testSet, res) #If so, return the test set classification errors made by this node.
     else:
         tbSet = testSet[testSet[node.col] >= node.value] #find which test observations belong to this tree's true branch
         fbSet = testSet[testSet[node.col] < node.value] #find which test observations belong to this tree's false branch
         
         if node.tb.results is None: #Check if the true branch is a branch node
             #If so, get the count of all misclassifications made by this branch's descendent leaf nodes on the test observations
-            term1 = deep_count_errors(node.tb, tbSet, res)
+            term1 = __deep_count_errors(node.tb, tbSet, res)
         else: #If the true branch is a leaf node, return the count of all test set classification errors made by the leaf.
-            term1 = count_errors(node.tb, tbSet,res)
+            term1 = __count_errors(node.tb, tbSet,res)
         if node.fb.results is None: #Check if the false branch is a branch node
             #If so, get the count of all misclassifications made by this branch's descendent leaf nodes on the test observations
-            term2 = deep_count_errors(node.fb, fbSet, res)
+            term2 = __deep_count_errors(node.fb, fbSet, res)
         else: #If the false branch is a leaf node, return the count of all test set classification errors made by the leaf.
-            term2 = count_errors(node.fb, fbSet, res) 
+            term2 = __count_errors(node.fb, fbSet, res) 
         return term1 + term2 #Sum the classification errors made by this nodes descendant leaves.
 
 def prune(tree, testSet, res, technique):
@@ -408,16 +398,16 @@ def prune(tree, testSet, res, technique):
             pfb = tree.fb #If the false branch is a leaf, then the false branch has--in essence--already been pruned.
         
         #Sum the number of misclassifications of the test data at each of the leaves of this node
-        wrong_in_leaves = deep_count_errors(ptb, tbSet, res) + deep_count_errors(pfb, fbSet, res)
+        wrong_in_leaves = __deep_count_errors(ptb, tbSet, res) + __deep_count_errors(pfb, fbSet, res)
             
         #Count the number of misclassificationsof the test data that would occur if this node were treated as a leaf
-        wrong_at_node = count_errors(tree, testSet, res)
+        wrong_at_node = __count_errors(tree, testSet, res)
         
         #Assess whether or not treating the node as a leaf improves the accuracy on the test set
         if wrong_at_node <= wrong_in_leaves: 
             #NOTE:The following line of code seems slightly redundant since count_errors(tree, testSet, res) had to call 
-            #get_results(tree). I should set up some way to save the output of that function call instead of calling it twice.
-            return decisionNode(results = get_results(tree)) #If so, return a decisionNode where the node is a leaf
+            #__get_results(tree). I should set up some way to save the output of that function call instead of calling it twice.
+            return decisionNode(results = __get_results(tree)) #If so, return a decisionNode where the node is a leaf
         else:
             #If not, return a decisionNode where the node splits on the same column and value as before, but the 
             #true and false branches are the pruned-versions of the original true and false branches. See above for
@@ -453,6 +443,41 @@ def fetchNodes(tree):
         return node_conditions #Send the full set of node conditions from this node up to the higher nodes.
     else: #If the node is a leaf, return the dictionary of results
         return [tree.results]
+        
+def set_node_num(obs, nodeCol, nodes):
+    """obs = a particular row from a dataframe that needs to have its column of node numbers filled
+    nodeCol = the column name that will contain the node number of the node that the observation belongs to
+    nodes = the list of nodes for the tree, created from fetchNodes()
+    ==========
+    Returns the observation with its nodeCol filled in"""
+    
+    for num, node in enumerate(nodes): #Iterated through nodes keeping track of both the item and its position in the list
+        setNum = True #initialize a variable to determine whether this leaf node is the correct leaf node for this observation.
+        conditions = node[:-1] #remove the dictionary of results from the list of conditions that characterize the leaf node
+        for cond in conditions: #Iterate through each condition, checking if this observation meets the branch node's condition
+            obs_val = obs[cond[0]] #Isolate this observations value on the column in this particular branch node's condition
+            if isinstance(obs_val, int) or isinstance(obs_val, float): #Check if the observation value is a number
+                if cond[-1] == 'true': #Check whether this leaf node meets this branching criteria, if so
+                    if obs_val < cond[1]: #Check if the observation fails to meet the criteria
+                        setNum = False #If so, this leaf node cannot be correct node
+                        break #Stop checking this leaf node's criteria
+                elif cond[-1] == 'false': #Check whether this leaf node fails to meet this branching critera
+                    if obs_val >= cond[1]: #Check if the observation *DOES* meet the criteria
+                        setNum = False #If so, this leaf node cannot be correct node
+                        break #Stop checking this leaf node's criteria
+            else: #Repeat the checking algorithm above, this time using the test for categorical variables
+                if cond[-1] == 'true':
+                    if obs_val != cond[1]: #Use the false branching criteria for categorical variables
+                        setNum = False
+                        break
+                elif cond[-1] == 'false':
+                    if obs_val == cond[1]: #use the true branching criteria for categorical variables
+                        setNum = False
+                        break
+        if setNum: #If this leaf node is actually the correct node for this observation
+            obs["nodeNum"] = num #Assign the node number, ie the place in the node list, to this observation.
+            break
+    return obs
 
 def forestPandas(data, resCol, maxDepth=None, percentage=70, numfeats = 15, fsize=5, selected=None):
     """data = a pandas dataframe of the feature vectors and the class.
