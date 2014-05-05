@@ -7,7 +7,8 @@ import logistic_regression, decision_trees
 def init_argument_parser():
     parser = argparse.ArgumentParser('CS289 Final Project')
     parser.add_argument('--method', dest='method', type=str,
-            default='forest', choices=['tree', 'forest', 'adaboost', 'logistic'])
+            default='forest', choices=['tree', 'forest', 'adaboost', 'logistic',
+                'logistic-plot'])
     parser.add_argument('-f', '--forest-size', dest='forest_size', type=int,
             default=1, help='How many trees are in each forest')
     parser.add_argument('-t', '--tree-size', dest='tree_size', type=int, default=0,
@@ -39,15 +40,20 @@ def init_argument_parser():
 
 def run_logistic_regression(args):
     x_train, y_train = util.import_cyclist_data(args['input'])
+    #x_train, x_test, y_train = matio.import_spam_data('spam.mat')
     if args['profile']:
-        cProfile.runctx("logistic_regression.assign_labels(x_train, y_train, 
-        lam=args['lambda'], step_size = args['step_size'], iterations=args['iterations'], weight_step = True, weight_step=True, k=args['k'])",
+        cProfile.runctx("logistic_regression.assign_labels(x_train, y_train, lam=args['lambda'], step_size = args['step_size'], iterations=args['iterations'], weight_step = True, k=args['k'])",
                 {'logistic_regression': logistic_regression}, locals())
     else:
-        logistic_regression.assign_labels(x_train, y_train,
-                lam=args['lambda'], step_size = args['step_size'],
-                iterations=args['iterations'], weight_step = True,
-                k=args['k'])
+        if args['method'] == 'logistic-plot':
+            logistic_regression.plot_batch_gradient_descent(x_train, y_train,
+                    lam=args['lambda'], step_size = args['step_size'],
+                    iterations = args['iterations'], weight_step = False)
+        elif args['method'] == 'logistic':
+            logistic_regression.assign_labels(x_train, y_train,
+                    lam=args['lambda'], step_size = args['step_size'],
+                    iterations=args['iterations'], weight_step = False,
+                    k=args['k'], x_test = x_train)
 
 def run_decision_trees(args):
     x_train, y_train = util.import_cyclist_data(args['input'])
@@ -89,7 +95,7 @@ def run_decision_trees(args):
 
 if __name__=="__main__":
     args = init_argument_parser()
-    if args['method'] == 'logistic':
+    if args['method'].startswith('logistic'):
         run_logistic_regression(args)
     else:
         run_decision_trees(args)
