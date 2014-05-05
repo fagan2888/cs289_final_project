@@ -87,8 +87,7 @@ def calc_gradient(design_matrix, y, beta, mu, lam):
     sub = np.subtract(mu, y)
     main_gradient = np.dot(np.transpose(design_matrix), sub)
 
-    regularization = [2*lam*beta_i for beta_i in beta]
-    main_gradient+=regularization
+    main_gradient += 2*lam*beta
     return main_gradient
 
 #approximate the gradient based on one data point
