@@ -47,7 +47,7 @@ def process_columns(training_data, function, augment=True):
     data_count = len(training_data)
     col_count = len(training_data[0])
     #copy the data to avoid overwriting the original
-    processed_data = np.array(training_data)
+    processed_data = np.empty(shape=training_data.shape)
     for i in xrange(col_count):
         col = get_col(training_data, i)
         processed_col = function(col)
@@ -238,7 +238,8 @@ def extract_fold(folded_list, fold_index, fold_count):
     fold_start = (fold_index*length)/fold_count
     fold_stop = ((fold_index+1)*length)/fold_count
     fold = folded_list[fold_start:fold_stop]
-    without_fold =folded_list[:fold_start]+folded_list[fold_stop:]
+    without_fold = np.concatenate((folded_list[:fold_start],
+            folded_list[fold_stop:]))
     return without_fold, fold
     
 def find_approximate_C_exp(images, labels, k, exp_range, **kwargs):
@@ -250,7 +251,7 @@ def cross_validate(x_full, y_full, lam, step_size, iterations, weight_step,
         k):
     #shuffle x_full and y_full so we can crossvalidate
     feature_count = len(x_full[0])
-    x_full, y_full = util.shuffle(x_full, y_full)
+    x_full, y_full = util.shuffle(x_full, y_full, to_numpy_array = True)
     beta_all = np.empty(shape=(k, feature_count))
     error_rates = np.empty(shape=k)
     nll = np.empty(shape=(k, iterations))
@@ -261,7 +262,7 @@ def cross_validate(x_full, y_full, lam, step_size, iterations, weight_step,
                 step_size, iterations, weight_step)
         test_labels_calc = calc_labels(x_test, beta_all[i])
         error_rates[i] = calc_error_rate(test_labels_calc, y_test)
-        print 'error rate', error_rates[i]
+        print 'cross-validation error rate', error_rates[i]
     beta_all = sum(beta_all)/float(len(beta_all))
     print 'avg error rate', sum(error_rates)/float(len(error_rates))
     return beta_all
