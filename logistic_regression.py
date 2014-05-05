@@ -233,12 +233,13 @@ def cross_validate(x_full, y_full, lam, step_size, iterations, weight_step,
     #shuffle x_full and y_full so we can crossvalidate
     feature_count = len(x_full[0])
     x_full, y_full = util.shuffle(x_full, y_full, to_numpy_array = True)
-    beta_all = np.empty(shape=(k, feature_count))
+    beta_all = np.zeros(shape=(k, feature_count))
     error_rates = np.empty(shape=k)
     nll = np.empty(shape=(k, iterations))
     for i in xrange(k):
         x_train, x_test = extract_fold(x_full, i, k)
         y_train, y_test = extract_fold(y_full, i, k)
+        #This alters beta_all and possibly nll
         run_batch_gradient_descent(nll[i], beta_all[i], x_train, y_train, lam,
                 step_size, iterations, weight_step)
         test_labels_calc = calc_labels(x_test, beta_all[i])
