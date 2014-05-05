@@ -110,7 +110,9 @@ def calc_beta(beta, step_size, gradient, iteration=0, scale_step_size=False):
     return np.subtract(beta,step_size*gradient)
 
 #calculating nll is not always necessary, and is huge performance killer
-def run_batch_gradient_descent(nll, beta, x, y, lam, step_size, iterations, weight_step, should_calc_nll=False):
+def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step, should_calc_nll=False):
+    beta = np.zeros(shape=x.shape[1])
+    nll = np.empty(shape=iterations)
     mu = calc_mu(x, beta)
     if should_calc_nll:
         nll[0] = calc_nll(x, y, beta, mu, lam)
@@ -120,6 +122,7 @@ def run_batch_gradient_descent(nll, beta, x, y, lam, step_size, iterations, weig
         mu = calc_mu(x, beta)
         if should_calc_nll:
             nll[i] = calc_nll(x, y, beta, mu, lam)
+    return nll, beta
 
 """
 #nll_limit limits the frequency with which we calculate the NLL
@@ -239,7 +242,7 @@ def cross_validate(x_full, y_full, lam, step_size, iterations, weight_step,
         x_train, x_test = extract_fold(x_full, i, k)
         y_train, y_test = extract_fold(y_full, i, k)
         #This alters beta_all and possibly nll
-        run_batch_gradient_descent(nll[i], beta_all[i], x_train, y_train, lam,
+        nll[i], beta_all[i] = run_batch_gradient_descent(x_train, y_train, lam,
                 step_size, iterations, weight_step)
         test_labels_calc = calc_labels(x_test, beta_all[i])
         error_rates[i] = calc_error_rate(test_labels_calc, y_test)
