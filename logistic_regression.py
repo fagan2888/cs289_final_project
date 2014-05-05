@@ -122,6 +122,7 @@ def run_batch_gradient_descent(nll, beta, x, y, lam, step_size, iterations, weig
         if should_calc_nll:
             nll[i] = calc_nll(x, y, beta, mu, lam)
 
+"""
 #nll_limit limits the frequency with which we calculate the NLL
 #Useful because it crushes performance and we only need to understand
 #NLL in broad strokes
@@ -153,6 +154,7 @@ def run_stochastic_gradient_descent(x, y, lam, step_size, iterations,
                 nll.append(calc_nll(x, y, beta, mu, lam))
                 #print i/nll_limit, 'nll', nll[len(nll)-1]
     return nll, beta
+"""
 
 def plot_nll_data(nll_data, label, show=True):
     pyplot.plot(nll_data, label=label)
