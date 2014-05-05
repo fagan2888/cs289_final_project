@@ -247,9 +247,10 @@ def cross_validate(x_full, y_full, lam, step_size, iterations, weight_step,
         test_labels_calc = calc_labels(x_test, beta_all[i])
         error_rates[i] = calc_error_rate(test_labels_calc, y_test)
         print 'cross-validation error rate', error_rates[i]
-    beta_all = sum(beta_all)/float(len(beta_all))
+    #Take the average beta among all betas calculated during cross-validation
+    beta = np.sum(beta_all, axis=0)/float(len(beta_all))
     print 'avg error rate', sum(error_rates)/float(len(error_rates))
-    return beta_all
+    return beta
         
 def calc_labels(x, beta):
     return [1 if np.dot(beta, x_i)>=0 else 0 for x_i in x]
