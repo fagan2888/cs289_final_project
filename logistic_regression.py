@@ -191,6 +191,7 @@ def plot_batch_gradient_descent(x_train, y_train, lam, step_size, iterations,
     plot_nll_data(nll_binary, 'binarized')
     plot_nll_data(nll_log, 'log transformed')
 
+"""
 def plot_stochastic_gradient_descent(x_train, y_train, lam=100,
         step_size=0.00001, iterations=1000, nll_limit=1, weight_step=False):
     x_train_binary = binarize_data(x_train)
@@ -215,6 +216,7 @@ def plot_stochastic_gradient_descent(x_train, y_train, lam=100,
     plot_nll_data(nll_binary, label='binarized', show=False)
     plot_nll_data(nll_std, label='standardized', show=False)
     plot_nll_data(nll_log, label='log transformed')
+"""
 
 def extract_fold(folded_list, fold_index, fold_count):
     length = len(folded_list)
