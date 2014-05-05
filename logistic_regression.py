@@ -104,28 +104,6 @@ def calc_single_gradient(x_i, y_i, beta, mu_i, lam):
 def newton_iteration(beta, hessian_inverse, gradient):
     return np.subtract(beta, np.dot(hessian_inverse, gradient))
 
-def problem_1():
-    x = np.array([[0, 3, 1], [1, 3, 1], [0, 1, 1], [1, 1, 1]])
-    y = np.array([1, 1, 0, 0])
-    beta = np.array([-2, 1, 0])
-    mu = calc_mu(x, beta)
-    lam = 0.07
-    iterations = 2
-    print '4a', mu
-
-    gradient = calc_gradient(x, y, beta, mu, lam)
-    hessian = calc_hessian(x, mu, lam)
-    hessian_inverse = np.linalg.inv(hessian)
-    beta = newton_iteration(beta, hessian_inverse, gradient)
-    print '4b', beta
-    mu = calc_mu(x, beta)
-    print '4c', mu
-    gradient = calc_gradient(x, y, beta, mu, lam)
-    hessian = calc_hessian(x, mu, lam)
-    hessian_inverse = np.linalg.inv(hessian)
-    beta = newton_iteration(beta, hessian_inverse, gradient)
-    print '4d', beta
-
 def calc_beta(beta, step_size, gradient, iteration=0, scale_step_size=False):
     if scale_step_size:
         #If you don't multiply by 10, the step size is too small to get close
