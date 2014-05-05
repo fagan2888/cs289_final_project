@@ -79,7 +79,8 @@ def calc_nll(x, y, beta, mu, lam):
     return total
 
 def calc_mu(x, beta):
-    mu = [1/(1+np.exp(-np.dot(beta, x_i))) for x_i in x]
+    x_dot_beta = x.dot(beta)
+    mu = [1/(1+np.exp(-x_dot_beta[i])) for i in xrange(x_dot_beta.shape[0])]
     return mu
 
 def calc_gradient(design_matrix, y, beta, mu, lam):
