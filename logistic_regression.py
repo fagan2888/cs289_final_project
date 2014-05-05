@@ -166,8 +166,8 @@ def plot_nll_data(nll_data, label, show=True):
         pyplot.legend()
         pyplot.show()
 
-def plot_batch_gradient_descent(x_train, y_train, lam=10, step_size=0.00001, 
-        iterations=100, weight_step=False):
+def plot_batch_gradient_descent(x_train, y_train, lam, step_size, iterations,
+        weight_step):
     x_train_std = standardize_data(x_train)
     x_train_binary = binarize_data(x_train)
     x_train_log = log_transform_data(x_train)
@@ -247,6 +247,8 @@ def cross_validate(x_full, y_full, lam, step_size, iterations, weight_step,
         test_labels_calc = calc_labels(x_test, beta_all[i])
         error_rates[i] = calc_error_rate(test_labels_calc, y_test)
         print 'cross-validation error rate', error_rates[i]
+        training_labels = calc_labels(x_train, beta_all[i])
+        print 'training error rate', calc_error_rate(training_labels, y_train)
     #Take the average beta among all betas calculated during cross-validation
     beta = np.sum(beta_all, axis=0)/float(len(beta_all))
     print 'avg error rate', sum(error_rates)/float(len(error_rates))
