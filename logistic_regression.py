@@ -271,7 +271,7 @@ def assign_labels(x_train, y_train, lam, step_size,
         #Now work on the actual test data
         outputfile = open('x_test.txt', 'w')
         outputfile.write('Id,Category\n')
-        x_train = log_transform_data(x_train)
+        x_test = log_transform_data(x_test)
         #x_test = standardize_data(x_test)
 
         labels_calc_test = calc_labels(x_test, beta)
