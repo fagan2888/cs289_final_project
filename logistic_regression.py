@@ -69,7 +69,7 @@ def binarize_data(training_data):
 #lambda is a python keyword
 #x_i \in R^d, y_i \in {0,1}
 def calc_nll(x, y, beta, mu, lam):
-    total = - y * np.log(mu)
+    total = - (y * np.log(mu))
     total -= (1-y) * np.log(1-mu)
     total = np.sum(total)
     total += lam*np.dot(beta, beta)
@@ -113,6 +113,7 @@ def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step, sh
     mu = calc_mu(x, beta)
     if should_calc_nll:
         nll[0] = calc_nll(x, y, beta, mu, lam)
+        if nll[0]<0: raise Exception('NLL is negative')
     for i in xrange(1, iterations):
         improved_nll = False
         gradient = calc_gradient(x, y, beta, mu, lam)
