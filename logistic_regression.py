@@ -110,18 +110,27 @@ def calc_beta(beta, step_size, gradient, iteration=0, scale_step_size=False):
     return np.subtract(beta,step_size*gradient)
 
 #calculating nll is not always necessary, and is huge performance killer
-def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step, should_calc_nll=False):
+def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step, should_calc_nll=True):
     beta = np.zeros(shape=x.shape[1])
     nll = np.empty(shape=iterations)
     mu = calc_mu(x, beta)
     if should_calc_nll:
         nll[0] = calc_nll(x, y, beta, mu, lam)
     for i in xrange(1, iterations):
-        gradient = calc_gradient(x, y, beta, mu, lam)
-        beta = calc_beta(beta, step_size, gradient, i, weight_step)
-        mu = calc_mu(x, beta)
-        if should_calc_nll:
-            nll[i] = calc_nll(x, y, beta, mu, lam)
+        improved_nll = False
+        while not improved_nll:
+            gradient = calc_gradient(x, y, beta, mu, lam)
+            beta_possible = calc_beta(beta, step_size, gradient, i, weight_step)
+            mu = calc_mu(x, beta_possible)
+            #print derp, gradient[derp], beta[derp], mu[derp]
+            nll[i] = calc_nll(x, y, beta_possible, mu, lam)
+            improved_nll = nll[i] <= nll[i-1]
+            if improved_nll:
+                step_size*=1.25
+            if not improved_nll:
+                #print i, 'No improvement', nll[i], nll[i-1]
+                step_size/=2
+        beta = beta_possible
     return nll, beta
 
 """
