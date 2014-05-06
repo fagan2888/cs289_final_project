@@ -282,15 +282,18 @@ def assign_labels(x_train, y_train, lam, step_size,
             y_train)
 
     if x_test is not None:
-        #Now work on the actual test data
-        outputfile = open('x_test.txt', 'w')
-        outputfile.write('Id,Category\n')
-        x_test = log_transform_data(x_test)
-        #x_test = standardize_data(x_test)
+        write_labels(beta, x_test)
 
-        labels_calc_test = calc_labels(x_test, beta)
-        for i, label in enumerate(labels_calc_test):
-            outputfile.write('{0},{1}\n'.format(i+1, label))
+def write_labels(x_test, beta):
+    #Now work on the actual test data
+    outputfile = open('x_test.txt', 'w')
+    outputfile.write('Id,Category\n')
+    x_test = log_transform_data(x_test)
+    #x_test = standardize_data(x_test)
+
+    labels_calc_test = calc_labels(x_test, beta)
+    for i, label in enumerate(labels_calc_test):
+        outputfile.write('{0},{1}\n'.format(i+1, label))
 
 def calc_error_rate(labels_calculated, labels_truth):
     comparison = [labels_calculated[i]==labels_truth[i] for i in xrange(len(labels_calculated))]
