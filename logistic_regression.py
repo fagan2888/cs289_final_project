@@ -269,8 +269,6 @@ def write_labels(x_test, beta):
     #Now work on the actual test data
     outputfile = open('x_test.txt', 'w')
     outputfile.write('Id,Category\n')
-    x_test = log_transform_data(x_test)
-    #x_test = standardize_data(x_test)
 
     labels_calc_test = calc_labels(x_test, beta)
     for i, label in enumerate(labels_calc_test):
