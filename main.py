@@ -29,7 +29,7 @@ def init_argument_parser():
     parser.add_argument('--output', dest='output', type=str,
             default=None, help='Filename to output test results')
     parser.add_argument('-l', '--lambda', dest='lambda', type=float,
-            default=100, help='lambda used for logistic regression')
+            default=1, help='lambda used for logistic regression')
     parser.add_argument('-s', '--step-size', dest='step_size', type=float,
             default=0.000005, help='step size used for logistic regression')
     parser.add_argument('-i', '--iterations', dest='iterations', type=int,
