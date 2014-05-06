@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import cProfile
 import util
 import matio
@@ -66,8 +67,8 @@ def run_logistic_regression(args):
                 beta = cPickle.load(inputfile)
 
             #Save beta
-            beta_dumpfile = open('beta{0}.pkl'.format(random.randint(0,1000)),
-                    'wb')
+            beta_dumpfile = open('beta{0}{1}.pkl'.format(datetime.now().hour,
+                datetime.now().minute), 'wb')
             cPickle.dump(beta, beta_dumpfile)
 
             labels = logistic_regression.calc_labels(x_train, beta)
