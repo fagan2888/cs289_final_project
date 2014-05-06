@@ -70,17 +70,17 @@ def binarize_data(training_data):
 #lambda is a python keyword
 #x_i \in R^d, y_i \in {0,1}
 def calc_nll(x, y, beta, mu, lam):
-    total = 0
-    for i in xrange(len(x)):
-        total-= y[i]*math.log(mu[i])
-        total-= (1-y[i])*math.log(1-mu[i])
-    #then add regularization parameter
+    total = - y * np.log(mu)
+    total -= (1-y) * np.log(1-mu)
+    total = np.sum(total)
     total += lam*np.dot(beta, beta)
     return total
 
 def calc_mu(x, beta):
-    x_dot_beta = x.dot(beta)
-    mu = [1/(1+np.exp(-x_dot_beta[i])) for i in xrange(x_dot_beta.shape[0])]
+    x_dot_beta = np.exp(-x.dot(beta))
+    mu = np.empty(shape=x_dot_beta.shape[0])
+    for i in xrange(x_dot_beta.shape[0]):
+        mu[i] = 1/(1+x_dot_beta[i])
     return mu
 
 def calc_gradient(design_matrix, y, beta, mu, lam):
