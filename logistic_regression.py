@@ -1,6 +1,5 @@
 import matio
 import numpy as np
-import cPickle
 import matplotlib.pyplot as pyplot
 import random
 import util
@@ -239,7 +238,7 @@ def find_approximate_C_exp(images, labels, k, exp_range, **kwargs):
 
 #All x and y data here comes from a training set
 #the _train and _test labels are used in the context of the cross-validation
-def cross_validate(x_full, y_full, lam, step_size, iterations, weight_step,
+def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations, weight_step,
         k):
     #shuffle x_full and y_full so we can crossvalidate
     feature_count = len(x_full[0])
@@ -265,24 +264,6 @@ def cross_validate(x_full, y_full, lam, step_size, iterations, weight_step,
         
 def calc_labels(x, beta):
     return [1 if np.dot(beta, x_i)>=0 else 0 for x_i in x]
-
-def assign_labels(x_train, y_train, lam, step_size,
-        iterations, k, weight_step=True, x_test = None):
-    x_train = log_transform_data(x_train)
-    #x_train = standardize_data(x_train)
-
-    beta = cross_validate(x_train, y_train, lam, step_size, iterations,
-            weight_step, k)
-
-    beta_dumpfile = open('beta{0}.pkl'.format(random.randint(0,1000)), 'wb')
-    cPickle.dump(beta, beta_dumpfile)
-
-    labels_calc_train = calc_labels(x_train, beta)
-    print 'training error rate', calc_error_rate(labels_calc_train,
-            y_train)
-
-    if x_test is not None:
-        write_labels(beta, x_test)
 
 def write_labels(x_test, beta):
     #Now work on the actual test data

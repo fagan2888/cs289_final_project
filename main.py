@@ -2,6 +2,7 @@ import argparse
 import cProfile
 import util
 import matio
+import cPickle
 import logistic_regression, decision_trees
 
 def init_argument_parser():
@@ -36,6 +37,8 @@ def init_argument_parser():
             default=False, help='Profile running time')
     parser.add_argument('-k', '--k-folds', dest='k', type=int, default=10,
             help='Number of k folds to use for cross validation')
+    parser.add_argument('--beta-file', dest='beta_file', type=str, default=None,
+            help='Import a precalculated beta from a file')
     return vars(parser.parse_args())
 
 def run_logistic_regression(args):
@@ -51,10 +54,26 @@ def run_logistic_regression(args):
                     lam=args['lambda'], step_size = args['step_size'],
                     iterations = args['iterations'], weight_step = False)
         elif args['method'] == 'logistic':
-            logistic_regression.assign_labels(x_train, y_train,
-                    lam=args['lambda'], step_size = args['step_size'],
-                    iterations=args['iterations'], weight_step = False,
-                    k=args['k'], x_test = x_train)
+            x_train = logistic_regression.log_transform_data(x_train)
+            if args['beta_file'] is None:
+                beta = logistic_regression.calc_cross_validated_beta(x_train,
+                        y_train, lam=args['lambda'], 
+                        step_size = args['step_size'],
+                        iterations=args['iterations'], weight_step = False,
+                        k=args['k'])
+            else:
+                inputfile = open(args['beta_file'], 'rb')
+                beta = cPickle.load(inputfile)
+
+            #Save beta
+            beta_dumpfile = open('beta{0}.pkl'.format(random.randint(0,1000)),
+                    'wb')
+            cPickle.dump(beta, beta_dumpfile)
+
+            labels = logistic_regression.calc_labels(x_train, beta)
+            training_error = logistic_regression.calc_error_rate(labels, y_train)
+            print 'training error rate', training_error
+            logistic_regression.write_labels(x_train, beta)
 
 def run_decision_trees(args):
     x_train, y_train = util.import_cyclist_data(args['input'])
