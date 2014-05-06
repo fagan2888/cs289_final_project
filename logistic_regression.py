@@ -34,7 +34,7 @@ def standardize_col(col):
     return col
 
 def log_transform_col(col):
-    return [math.log(value + 0.1) for value in col]
+    return np.log(col+0.1)
 
 def binarize_col(col):
     return [1 if value>0 else 0 for value in col]
