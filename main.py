@@ -29,7 +29,7 @@ def init_argument_parser():
     parser.add_argument('-l', '--lambda', dest='lambda', type=float,
             default=100, help='lambda used for logistic regression')
     parser.add_argument('-s', '--step-size', dest='step_size', type=float,
-            default=0.1, help='step size used for logistic regression')
+            default=0.000005, help='step size used for logistic regression')
     parser.add_argument('-i', '--iterations', dest='iterations', type=int,
             default=100, help='iterations to run the chosen algorithm')
     parser.add_argument('--profile', dest='profile', action='store_true',
@@ -40,9 +40,10 @@ def init_argument_parser():
 
 def run_logistic_regression(args):
     x_train, y_train = util.import_cyclist_data(args['input'])
+    print 'cyclist data loaded'
     #x_train, x_test, y_train = matio.import_spam_data('spam.mat')
     if args['profile']:
-        cProfile.runctx("logistic_regression.assign_labels(x_train, y_train, lam=args['lambda'], step_size = args['step_size'], iterations=args['iterations'], weight_step = True, k=args['k'])",
+        cProfile.runctx("logistic_regression.assign_labels(x_train, y_train, lam=args['lambda'], step_size = args['step_size'], iterations=args['iterations'], weight_step = False, k=args['k'], x_test = x_train)",
                 {'logistic_regression': logistic_regression}, locals())
     else:
         if args['method'] == 'logistic-plot':
