@@ -38,6 +38,8 @@ def init_argument_parser():
             default=False, help='Profile running time')
     parser.add_argument('-k', '--k-folds', dest='k', type=int, default=10,
             help='Number of k folds to use for cross validation')
+    parser.add_argument('--store-beta', dest='store_beta', default=False,
+            action='store_true', help='Store beta in an external file?')
     parser.add_argument('--beta-file', dest='beta_file', type=str, default=None,
             help='Import a precalculated beta from a file')
     return vars(parser.parse_args())
@@ -67,9 +69,10 @@ def run_logistic_regression(args):
                 beta = cPickle.load(inputfile)
 
             #Save beta
-            beta_dumpfile = open('beta{0}{1}.pkl'.format(datetime.now().hour,
-                datetime.now().minute), 'wb')
-            cPickle.dump(beta, beta_dumpfile)
+            if args['store_beta']:
+                beta_dumpfile = open('beta{0}{1}.pkl'.format(
+                    datetime.now().hour, datetime.now().minute), 'wb')
+                cPickle.dump(beta, beta_dumpfile)
 
             labels = logistic_regression.calc_labels(x_train, beta)
             training_error = logistic_regression.calc_error_rate(labels, y_train)
