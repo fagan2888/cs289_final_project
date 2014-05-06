@@ -1,6 +1,6 @@
 import matio
 import numpy as np
-import math
+import cPickle
 import matplotlib.pyplot as pyplot
 import random
 import util
@@ -273,6 +273,9 @@ def assign_labels(x_train, y_train, lam, step_size,
 
     beta = cross_validate(x_train, y_train, lam, step_size, iterations,
             weight_step, k)
+
+    beta_dumpfile = open('beta{0}.pkl'.format(random.randint(0,1000)), 'wb')
+    cPickle.dump(beta, beta_dumpfile)
 
     labels_calc_train = calc_labels(x_train, beta)
     print 'training error rate', calc_error_rate(labels_calc_train,
