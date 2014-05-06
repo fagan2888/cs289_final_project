@@ -78,9 +78,7 @@ def calc_nll(x, y, beta, mu, lam):
 
 def calc_mu(x, beta):
     x_dot_beta = np.exp(-x.dot(beta))
-    mu = np.empty(shape=x_dot_beta.shape[0])
-    for i in xrange(x_dot_beta.shape[0]):
-        mu[i] = 1/(1+x_dot_beta[i])
+    mu = 1/(1+x_dot_beta)
     return mu
 
 def calc_gradient(design_matrix, y, beta, mu, lam):
@@ -118,8 +116,8 @@ def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step, sh
         nll[0] = calc_nll(x, y, beta, mu, lam)
     for i in xrange(1, iterations):
         improved_nll = False
+        gradient = calc_gradient(x, y, beta, mu, lam)
         while not improved_nll:
-            gradient = calc_gradient(x, y, beta, mu, lam)
             beta_possible = calc_beta(beta, step_size, gradient, i, weight_step)
             mu = calc_mu(x, beta_possible)
             #print derp, gradient[derp], beta[derp], mu[derp]
