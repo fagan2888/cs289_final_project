@@ -81,6 +81,7 @@ def calc_nll(x, y, beta, mu, lam):
 def calc_mu(x, beta):
     x_dot_beta = np.exp(-x.dot(beta))
     mu = 1/(1+x_dot_beta)
+    mu = np.clip(mu, 1e-10, 1-1e-10)
     return mu
 
 def calc_gradient(design_matrix, y, beta, mu, lam):
