@@ -6,12 +6,13 @@ import util
 import matio
 import cPickle
 import logistic_regression, decision_trees
+from sklearn.linear_model import LogisticRegression
 
 def init_argument_parser():
     parser = argparse.ArgumentParser('CS289 Final Project')
     parser.add_argument('--method', dest='method', type=str,
             default='forest', choices=['tree', 'forest', 'adaboost', 'logistic',
-                'logistic-plot'])
+                'logistic-plot', 'logistic-sklearn'])
     parser.add_argument('-f', '--forest-size', dest='forest_size', type=int,
             default=1, help='How many trees are in each forest')
     parser.add_argument('-t', '--tree-size', dest='tree_size', type=int, default=0,
@@ -75,6 +76,13 @@ def run_logistic_regression(x_train, y_train, args):
         training_error = logistic_regression.calc_error_rate(labels, y_train)
         print 'training error rate', training_error
         logistic_regression.write_labels(x_train, beta)
+    elif args['method'] == 'logistic-sklearn':
+        x_train = logistic_regression.standardize_data(x_train)
+        x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
+        logistic = LogisticRegression()
+        fold_size = 100
+        logistic.fit(x_train[fold_size:], y_train[fold_size:])
+        print logistic.score(x_train[:fold_size], y_train[:fold_size])
 
 def run_decision_trees(args):
     x_train, y_train = util.import_cyclist_data(args['input'])
