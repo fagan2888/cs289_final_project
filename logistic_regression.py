@@ -27,9 +27,12 @@ def get_col(train, col_index):
 
 #http://stackoverflow.com/questions/4544292/how-do-i-standardize-a-matrix
 def standardize_col(col):
-    mean = sum(col)/float(len(col))
+    mean = np.mean(col)
     std_dev = np.std(col)
-    col = [(value-mean)/std_dev for value in col]
+    if std_dev == 0:
+        col = col - mean
+    else:
+        col = (col - mean)/std_dev
     return col
 
 def log_transform_col(col):
