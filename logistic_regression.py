@@ -120,25 +120,43 @@ def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step,
     if use_nll:
         nll.append(calc_nll(x, y, beta, mu, lam))
         if nll[0]<0: raise Exception('NLL is negative')
+    random_adjuster = np.empty(shape=beta.shape)
+    for i in xrange(beta.shape[0]):
+        random_adjuster[i] = random.uniform(0.1, 10)
+
     for i in xrange(1, iterations):
+        if use_nll: nll.append(None)
+        improvement_made = False
         gradient = calc_gradient(x, y, beta, mu, lam)
-        beta = calc_beta(beta, step_size, gradient, i, weight_step)
-        mu = calc_mu(x, beta)
-        if use_nll:
-            nll.append(calc_nll(x, y, beta, mu, lam))
-            #If we haven't made sufficient improvement
-            if i>5 and made_insufficient_progress(nll, threshold = 0.000001):
-                print i, 'Insufficient progress made'
-                break
+        gradient = randomly_adjust(gradient, random_adjuster)
+        while not improvement_made:
+            beta_possible = calc_beta(beta, step_size, gradient, i, False)
+            mu = calc_mu(x, beta_possible)
+            if use_nll:
+                nll[i] = calc_nll(x, y, beta_possible, mu, lam)
+                improvement_made = nll[i] <= nll[i-1]
+                if improvement_made:
+                    step_size*=2
+                else:
+                    step_size/=5
+            else:
+                improvement_made = True
+        beta = beta_possible
+        #Check every 5 iterations to see if we have made sufficient progress
+        #If we aren't changing the NLL anymore, no point in continuing
+        if i>10 and i % 5 == 0 and made_insufficient_progress(nll,
+                threshold = 0.00000001):
+            print i, 'Insufficient progress made'
+            break
     return nll, beta
 
 def made_insufficient_progress(nll, threshold):
-    return nll[-5] - nll[-1] < threshold
+    difference = abs(np.mean(nll[-10:-6]) - np.mean(nll[-5:-1])) 
+    return difference < threshold
 
-def randomly_adjust_beta(beta):
-    for i, value in enumerate(beta):
-        beta[i] *= random.uniform(0.5, 2)
-    return beta
+def randomly_adjust(array, random_adjuster):
+    np.random.shuffle(random_adjuster)
+    return array * random_adjuster
 
 def run_stochastic_gradient_descent(x, y, lam, step_size, iterations,
         weight_step):
@@ -211,7 +229,7 @@ def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations, weight
     x_full, y_full = util.shuffle(x_full, y_full, to_numpy_array = True)
     beta_all = np.zeros(shape=(k, feature_count))
     error_rates = np.empty(shape=k)
-    nll = np.empty(shape=(k, iterations))
+    nll = [None]*k
     for i in xrange(k):
         x_train, x_test = extract_fold(x_full, i, k)
         y_train, y_test = extract_fold(y_full, i, k)
@@ -222,14 +240,16 @@ def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations, weight
         error_rates[i] = calc_error_rate(test_labels_calc, y_test)
         print 'cross-validation error rate', error_rates[i]
         training_labels = calc_labels(x_train, beta_all[i])
-        print 'training error rate', calc_error_rate(training_labels, y_train)
+        print 'training error rate', calc_error_rate(training_labels, y_train),
         full_labels = calc_labels(x_full, beta_all[i])
-        print 'full training error rate', calc_error_rate(full_labels, y_full)
+        print 'full', calc_error_rate(full_labels, y_full)
         #plot_nll_data(nll[i], 'derp')
     #Take the average beta among all betas calculated during cross-validation
-    beta = np.sum(beta_all, axis=0)/float(len(beta_all))
+    #beta = np.sum(beta_all, axis=0)/float(len(beta_all))
+    for i in xrange(len(error_rates)):
+        print i, nll[i][-1], error_rates[i]
     print 'avg error rate', np.mean(error_rates)
-    return beta
+    return beta_all
         
 def calc_labels(x, beta):
     return [1 if np.dot(beta, x_i)>=0 else 0 for x_i in x]
@@ -250,53 +270,6 @@ def calc_error_rate(labels_calculated, labels_truth):
     return error_rate
 
 """
-#This version calculates using NLL to ensure constant improvement
-#It is good when you aren't sure what step size is appropriate
-def run_batch_gradient_descent_by_nll(x, y, lam, step_size, iterations,
-        weight_step):
-    initial_step_size = step_size
-    beta = np.zeros(shape=x.shape[1])
-    best_beta = None
-    best_nll = 99999
-    nll = np.empty(shape=iterations)
-    mu = calc_mu(x, beta)
-    nll[0] = calc_nll(x, y, beta, mu, lam)
-    if nll[0]<0: raise Exception('NLL is negative')
-    last_nll = nll[0]
-    for i in xrange(1, iterations):
-        improved_nll = False
-        gradient = calc_gradient(x, y, beta, mu, lam)
-        while not improved_nll:
-            beta_possible = calc_beta(beta, step_size, gradient, i, weight_step)
-            mu = calc_mu(x, beta_possible)
-            #print derp, gradient[derp], beta[derp], mu[derp]
-            nll[i] = calc_nll(x, y, beta_possible, mu, lam)
-            improved_nll = nll[i] <= last_nll
-            if improved_nll:
-                step_size*=1.01
-                pass
-            else:
-                #print i, 'No improvement', nll[i], last_nll, step_size
-                step_size/=2
-        beta = beta_possible
-        if step_size < initial_step_size / 100:
-            print i, 'this might work'
-            if nll[i]<best_nll:
-                best_beta = np.copy(beta)
-                best_nll = nll[i]
-                print 'new best beta', nll[i]
-            beta = randomly_adjust_beta(beta)
-            mu = calc_mu(x, beta)
-            last_nll = calc_nll(x, y, beta, mu, lam)
-            step_size = initial_step_size
-        else:
-            last_nll = nll[i]
-    #Check if the last beta was the best
-    if nll[-1]<best_nll:
-        best_beta = np.copy(beta)
-        print 'suspicious'
-    return nll, best_beta
-
 def plot_stochastic_gradient_descent(x_train, y_train, lam=100,
         step_size=0.00001, iterations=1000, nll_limit=1, weight_step=False):
     x_train_binary = binarize_data(x_train)
