@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 from datetime import datetime
 import cProfile
 import util
@@ -67,6 +68,8 @@ def run_logistic_regression(x_train, y_train, args):
             beta_dumpfile = open('beta{0}{1}.pkl'.format(
                 datetime.now().hour, datetime.now().minute), 'wb')
             cPickle.dump(beta, beta_dumpfile)
+
+        beta = np.sum(beta, axis=0)/float(len(beta))
 
         labels = logistic_regression.calc_labels(x_train, beta)
         training_error = logistic_regression.calc_error_rate(labels, y_train)
