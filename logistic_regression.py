@@ -122,7 +122,7 @@ def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step,
         if nll[0]<0: raise Exception('NLL is negative')
     random_adjuster = np.empty(shape=beta.shape)
     for i in xrange(beta.shape[0]):
-        random_adjuster[i] = random.uniform(0.1, 10)
+        random_adjuster[i] = random.uniform(0.01, 100)
 
     for i in xrange(1, iterations):
         if use_nll: nll.append(None)
