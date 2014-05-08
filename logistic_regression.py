@@ -128,6 +128,15 @@ def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step):
             print i, 'Insufficient progress made'
             break
     return nll, beta
+        #print derp, gradient[derp], beta[derp], mu[derp]
+
+def made_insufficient_progress(nll, threshold):
+    return nll[-5] - nll[-1] < threshold
+
+def randomly_adjust_beta(beta):
+    for i, value in enumerate(beta):
+        beta[i] *= random.uniform(0.5, 2)
+    return beta
 
 """
 #nll_limit limits the frequency with which we calculate the NLL
