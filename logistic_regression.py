@@ -111,24 +111,26 @@ def calc_beta(beta, step_size, gradient, iteration=0, scale_step_size=False):
     return np.subtract(beta,step_size*gradient)
 
 #calculating nll is not always necessary, and is huge performance killer
-def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step):
+def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step,
+        use_nll):
     initial_step_size = step_size
     beta = np.zeros(shape=x.shape[1])
     mu = calc_mu(x, beta)
     nll = list()
-    nll.append(calc_nll(x, y, beta, mu, lam))
-    if nll[0]<0: raise Exception('NLL is negative')
+    if use_nll:
+        nll.append(calc_nll(x, y, beta, mu, lam))
+        if nll[0]<0: raise Exception('NLL is negative')
     for i in xrange(1, iterations):
         gradient = calc_gradient(x, y, beta, mu, lam)
         beta = calc_beta(beta, step_size, gradient, i, weight_step)
         mu = calc_mu(x, beta)
-        nll.append(calc_nll(x, y, beta, mu, lam))
-        #If we haven't made sufficient improvement
-        if i>5 and made_insufficient_progress(nll, threshold = 0.0001):
-            print i, 'Insufficient progress made'
-            break
+        if use_nll:
+            nll.append(calc_nll(x, y, beta, mu, lam))
+            #If we haven't made sufficient improvement
+            if i>5 and made_insufficient_progress(nll, threshold = 0.000001):
+                print i, 'Insufficient progress made'
+                break
     return nll, beta
-        #print derp, gradient[derp], beta[derp], mu[derp]
 
 def made_insufficient_progress(nll, threshold):
     return nll[-5] - nll[-1] < threshold
@@ -242,7 +244,7 @@ def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations, weight
         y_train, y_test = extract_fold(y_full, i, k)
         #This alters beta_all and possibly nll
         nll[i], beta_all[i] = run_batch_gradient_descent(x_train, y_train, lam,
-                step_size, iterations, weight_step)
+                step_size, iterations, weight_step, use_nll = True)
         test_labels_calc = calc_labels(x_test, beta_all[i])
         error_rates[i] = calc_error_rate(test_labels_calc, y_test)
         print 'cross-validation error rate', error_rates[i]
