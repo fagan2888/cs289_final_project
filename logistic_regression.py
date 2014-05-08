@@ -138,39 +138,22 @@ def randomly_adjust_beta(beta):
         beta[i] *= random.uniform(0.5, 2)
     return beta
 
-"""
-#nll_limit limits the frequency with which we calculate the NLL
-#Useful because it crushes performance and we only need to understand
-#NLL in broad strokes
 def run_stochastic_gradient_descent(x, y, lam, step_size, iterations,
-        weight_step, nll_limit=1):
-    feature_count = len(x[0])
-    data_count = len(x)
-    beta = [0 for i in xrange(feature_count)]
+        weight_step):
+    beta = np.zeros(shape=x.shape[1])
+    mu = calc_mu(x, beta)
     nll = list()
-    for loop in xrange(iterations/data_count+1):
-        x, y = util.shuffle(x, y)
-        x_curr = x[0]
-        y_curr = y[0]
+    nll.append(calc_nll(x, y, beta, mu, lam))
+    if nll[0]<0: raise Exception('NLL is negative')
+
+    for i in xrange(1, iterations):
+        data_point = random.randint(0, x.shape[0]-1)
+        gradient = calc_single_gradient(x[data_point], y[data_point], beta,
+                mu[data_point], lam)
+        beta = calc_beta(beta, step_size, gradient, i, weight_step)
         mu = calc_mu(x, beta)
         nll.append(calc_nll(x, y, beta, mu, lam))
-        for i in xrange(1, iterations-loop*data_count):
-            full_iteration_count = loop*data_count+i
-            x_curr = x[i]
-            y_curr = y[i]
-            mu_curr = 1/(1+np.exp(-np.dot(beta, x_curr)))
-            gradient = calc_single_gradient(x_curr, y_curr, beta, mu_curr, lam)
-            if weight_step:
-                beta = np.subtract(beta,
-                        step_size*gradient*10.0/full_iteration_count)
-            else:
-                beta = np.subtract(beta, step_size*gradient)
-            if i%nll_limit==0:
-                mu = calc_mu(x, beta)
-                nll.append(calc_nll(x, y, beta, mu, lam))
-                #print i/nll_limit, 'nll', nll[len(nll)-1]
     return nll, beta
-"""
 
 def plot_nll_data(nll_data, label, show=True):
     pyplot.plot(nll_data, label=label)
