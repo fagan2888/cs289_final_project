@@ -111,28 +111,22 @@ def calc_beta(beta, step_size, gradient, iteration=0, scale_step_size=False):
     return np.subtract(beta,step_size*gradient)
 
 #calculating nll is not always necessary, and is huge performance killer
-def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step, should_calc_nll=True):
+def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step):
+    initial_step_size = step_size
     beta = np.zeros(shape=x.shape[1])
-    nll = np.empty(shape=iterations)
     mu = calc_mu(x, beta)
-    if should_calc_nll:
-        nll[0] = calc_nll(x, y, beta, mu, lam)
-        if nll[0]<0: raise Exception('NLL is negative')
+    nll = list()
+    nll.append(calc_nll(x, y, beta, mu, lam))
+    if nll[0]<0: raise Exception('NLL is negative')
     for i in xrange(1, iterations):
-        improved_nll = False
         gradient = calc_gradient(x, y, beta, mu, lam)
-        while not improved_nll:
-            beta_possible = calc_beta(beta, step_size, gradient, i, weight_step)
-            mu = calc_mu(x, beta_possible)
-            #print derp, gradient[derp], beta[derp], mu[derp]
-            nll[i] = calc_nll(x, y, beta_possible, mu, lam)
-            improved_nll = nll[i] <= nll[i-1]
-            if improved_nll:
-                step_size*=1.25
-            if not improved_nll:
-                #print i, 'No improvement', nll[i], nll[i-1]
-                step_size/=2
-        beta = beta_possible
+        beta = calc_beta(beta, step_size, gradient, i, weight_step)
+        mu = calc_mu(x, beta)
+        nll.append(calc_nll(x, y, beta, mu, lam))
+        #If we haven't made sufficient improvement
+        if i>5 and made_insufficient_progress(nll, threshold = 0.0001):
+            print i, 'Insufficient progress made'
+            break
     return nll, beta
 
 """
@@ -264,6 +258,7 @@ def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations, weight
         print 'training error rate', calc_error_rate(training_labels, y_train)
         full_labels = calc_labels(x_full, beta_all[i])
         print 'full training error rate', calc_error_rate(full_labels, y_full)
+        #plot_nll_data(nll[i], 'derp')
     #Take the average beta among all betas calculated during cross-validation
     beta = np.sum(beta_all, axis=0)/float(len(beta_all))
     print 'avg error rate', np.mean(error_rates)
