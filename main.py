@@ -46,8 +46,8 @@ def init_argument_parser():
 
 def run_logistic_regression(args):
     x_train, y_train = util.import_cyclist_data(args['input'])
-    print 'cyclist data loaded'
     #x_train, x_test, y_train = matio.import_spam_data('spam.mat')
+    print 'data loaded'
     if args['profile']:
         cProfile.runctx("logistic_regression.assign_labels(x_train, y_train, lam=args['lambda'], step_size = args['step_size'], iterations=args['iterations'], weight_step = False, k=args['k'], x_test = x_train)",
                 {'logistic_regression': logistic_regression}, locals())
@@ -57,7 +57,7 @@ def run_logistic_regression(args):
                     lam=args['lambda'], step_size = args['step_size'],
                     iterations = args['iterations'], weight_step = False)
         elif args['method'] == 'logistic':
-            x_train = logistic_regression.log_transform_data(x_train)
+            x_train = logistic_regression.standardize_data(x_train)
             if args['beta_file'] is None:
                 beta = logistic_regression.calc_cross_validated_beta(x_train,
                         y_train, lam=args['lambda'], 
