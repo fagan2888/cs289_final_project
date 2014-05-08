@@ -290,3 +290,52 @@ def calc_error_rate(labels_calculated, labels_truth):
     error_count = comparison.count(False)
     error_rate = error_count/float(len(labels_calculated))
     return error_rate
+
+"""
+#This version calculates using NLL to ensure constant improvement
+#It is good when you aren't sure what step size is appropriate
+def run_batch_gradient_descent_by_nll(x, y, lam, step_size, iterations,
+        weight_step):
+    initial_step_size = step_size
+    beta = np.zeros(shape=x.shape[1])
+    best_beta = None
+    best_nll = 99999
+    nll = np.empty(shape=iterations)
+    mu = calc_mu(x, beta)
+    nll[0] = calc_nll(x, y, beta, mu, lam)
+    if nll[0]<0: raise Exception('NLL is negative')
+    last_nll = nll[0]
+    for i in xrange(1, iterations):
+        improved_nll = False
+        gradient = calc_gradient(x, y, beta, mu, lam)
+        while not improved_nll:
+            beta_possible = calc_beta(beta, step_size, gradient, i, weight_step)
+            mu = calc_mu(x, beta_possible)
+            #print derp, gradient[derp], beta[derp], mu[derp]
+            nll[i] = calc_nll(x, y, beta_possible, mu, lam)
+            improved_nll = nll[i] <= last_nll
+            if improved_nll:
+                step_size*=1.01
+                pass
+            else:
+                #print i, 'No improvement', nll[i], last_nll, step_size
+                step_size/=2
+        beta = beta_possible
+        if step_size < initial_step_size / 100:
+            print i, 'this might work'
+            if nll[i]<best_nll:
+                best_beta = np.copy(beta)
+                best_nll = nll[i]
+                print 'new best beta', nll[i]
+            beta = randomly_adjust_beta(beta)
+            mu = calc_mu(x, beta)
+            last_nll = calc_nll(x, y, beta, mu, lam)
+            step_size = initial_step_size
+        else:
+            last_nll = nll[i]
+    #Check if the last beta was the best
+    if nll[-1]<best_nll:
+        best_beta = np.copy(beta)
+        print 'suspicious'
+    return nll, best_beta
+"""
