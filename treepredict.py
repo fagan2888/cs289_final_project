@@ -293,17 +293,39 @@ def searchFeats(tree):
     else: #If I am at a leaf, return an empty set
         return set()
       
+
+def calc_prediction_error(data):
+    assert len(data.columns) == 2
+    tot = len(data)
+    count_err = 0
+    for ind, row in data.iterrows():
+        if row.iloc[0] != row.iloc[1]:
+            count_err += 1
+    return float(count_err)/tot
+
+
 def testAccuracy(testSet, tree, classes, res):
     preds = [] #Initialize an empty list to hold the predictions
     actual = np.array(testSet[res]) #Get the actual array of class labels
     for ind, row in testSet.iterrows(): #Iterate over all rows of the test data
         preds.append(predictWithTree(row, tree, classes)) #Make predictions on the test data
     preds = np.array(preds) #make predictions an array
-    numWrong = 0 #Initialize the number of wrong predictions
-    for i in range(len(preds)): #Iterate over all of the predictions and actual labels
-        if preds[i] != actual[i]: #Check to see if the predictions are not the same.
-            numWrong += 1 #If the predictions are not the same, increment numWrong by one
-    return 1 - float(numWrong)/len(testSet) #Return the accuracy of the tree's predictions.
+    preds_and_real = pd.DataFrame({'Predictions': preds, 'True Class': actual})
+    
+    tot_err = calc_prediction_error(preds_and_real)
+    
+    print "When using the decision tree, its various error rates are:"
+    print "Total Error: {}".format(tot_err)
+    
+    groups_and_results = {}
+    groups_and_results['groups'] = {}
+    groups_and_results['results'] = {}
+    for state in classes:
+        groups_and_results['groups'][state] = preds_and_real[preds_and_real['True Class'] == state]
+        groups_and_results['results'][state] = calc_prediction_error(groups_and_results['groups'][state])
+        print "Class {} Error rate: {}".format(state, groups_and_results['results'][state]) 
+    errs = [tot_err] + [groups_and_results['results'][state] for state in classes]
+    return errs #Return the accuracy of the tree's predictions.
     
 def __get_results(node):
     """node = a particular decisionNode from a decision tree.
