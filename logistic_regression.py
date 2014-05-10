@@ -149,7 +149,7 @@ def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step,
         #Check every 5 iterations to see if we have made sufficient progress
         #If we aren't changing the NLL anymore, no point in continuing
         if i>10 and i % 5 == 0 and made_insufficient_progress(nll,
-                threshold = 0.00000001):
+                threshold = 1e-6):
             print i, 'Insufficient progress made'
             break
     return nll, beta
