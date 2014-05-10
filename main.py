@@ -80,11 +80,11 @@ def run_logistic_regression(x_train, y_train, x_test, y_test, args):
         logistic_regression.write_labels(x_test, beta)
     elif args['method'] == 'logistic-sklearn':
         x_train = logistic_regression.standardize_data(x_train)
+        x_test = logistic_regression.standardize_data(x_test)
         x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
         logistic = LogisticRegression()
-        fold_size = 100
-        logistic.fit(x_train[fold_size:], y_train[fold_size:])
-        print logistic.score(x_train[:fold_size], y_train[:fold_size])
+        logistic.fit(x_train, y_train)
+        print logistic.score(x_test, y_test)
 
 def run_decision_trees(args):
     x_train, y_train = util.import_cyclist_data(args['input'])
