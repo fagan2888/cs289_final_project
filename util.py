@@ -95,6 +95,9 @@ def smart_import_cyclist_data(input_filename_2011, input_filename_2012):
     data_2011 = data_2011[shared_columns]
     data_2012 = data_2012[shared_columns]
     print data_2011.shape, data_2012.shape
+    #Replace unknown values with value that doesn't mess up logistic regression
+    data_2011[data_2011==9999] = -1
+    data_2012[data_2012==9999] = -1
     x_train, y_train = extract_xy_from_cyclist_data(data_2011)
     x_test, y_test = extract_xy_from_cyclist_data(data_2012)
     return x_train, y_train, x_test, y_test
