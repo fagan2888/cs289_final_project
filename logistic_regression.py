@@ -27,6 +27,10 @@ def get_col(train, col_index):
 
 #http://stackoverflow.com/questions/4544292/how-do-i-standardize-a-matrix
 def standardize_col(col):
+    #If the column has few unique values, it is probably categorical
+    #So don't standardize it
+    if len(set(col))<5:
+        return col
     mean = np.mean(col)
     std_dev = np.std(col)
     if std_dev == 0:
