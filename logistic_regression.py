@@ -247,7 +247,7 @@ def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations,
         print 'training error rate', calc_error_rate(training_labels, y_train),
         full_labels = calc_labels(x_full, beta_all[i])
         print 'full', calc_error_rate(full_labels, y_full)
-        if plot_nll:
+        if plot_nll and use_nll:
             plot_nll_data(nll[i], 'derp')
     #Take the average beta among all betas calculated during cross-validation
     #beta = np.sum(beta_all, axis=0)/float(len(beta_all))
