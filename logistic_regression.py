@@ -226,8 +226,8 @@ def find_approximate_C_exp(images, labels, k, exp_range, **kwargs):
 
 #All x and y data here comes from a training set
 #the _train and _test labels are used in the context of the cross-validation
-def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations, weight_step,
-        k):
+def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations,
+        weight_step, k, use_nll, plot_nll):
     #shuffle x_full and y_full so we can crossvalidate
     feature_count = len(x_full[0])
     x_full, y_full = util.shuffle(x_full, y_full, to_numpy_array = True)
@@ -239,7 +239,7 @@ def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations, weight
         y_train, y_test = extract_fold(y_full, i, k)
         #This alters beta_all and possibly nll
         nll[i], beta_all[i] = run_batch_gradient_descent(x_train, y_train, lam,
-                step_size, iterations, weight_step, use_nll = True)
+                step_size, iterations, weight_step, use_nll = use_nll)
         test_labels_calc = calc_labels(x_test, beta_all[i])
         error_rates[i] = calc_error_rate(test_labels_calc, y_test)
         print 'cross-validation error rate', error_rates[i]
@@ -247,11 +247,13 @@ def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations, weight
         print 'training error rate', calc_error_rate(training_labels, y_train),
         full_labels = calc_labels(x_full, beta_all[i])
         print 'full', calc_error_rate(full_labels, y_full)
-        #plot_nll_data(nll[i], 'derp')
+        if plot_nll:
+            plot_nll_data(nll[i], 'derp')
     #Take the average beta among all betas calculated during cross-validation
     #beta = np.sum(beta_all, axis=0)/float(len(beta_all))
-    for i in xrange(len(error_rates)):
-        print i, nll[i][-1], error_rates[i]
+    if use_nll:
+        for i in xrange(len(error_rates)):
+            print i, nll[i][-1], error_rates[i]
     print 'avg error rate', np.mean(error_rates)
     return beta_all
         

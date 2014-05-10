@@ -44,6 +44,10 @@ def init_argument_parser():
             action='store_true', help='Store beta in an external file?')
     parser.add_argument('--beta-file', dest='beta_file', type=str, default=None,
             help='Import a precalculated beta from a file')
+    parser.add_argument('--use-nll', dest='use_nll', default=True,
+            action='store_false', help='Skip calculating NLL')
+    parser.add_argument('--plot-nll', dest='plot_nll', default=False,
+            action='store_true', help='Plot NLL')
     return vars(parser.parse_args())
 
 def run_logistic_regression(x_train, y_train, x_test, y_test, args):
@@ -61,7 +65,8 @@ def run_logistic_regression(x_train, y_train, x_test, y_test, args):
                     y_train, lam=args['lambda'], 
                     step_size = args['step_size'],
                     iterations=args['iterations'], weight_step = False,
-                    k=args['k'])
+                    k=args['k'], use_nll = args['use_nll'],
+                    plot_nll = args['plot_nll'])
         else:
             inputfile = open(args['beta_file'], 'rb')
             beta = cPickle.load(inputfile)
@@ -134,7 +139,6 @@ if __name__=="__main__":
         x_train, y_train, x_test, y_test = \
                 util.smart_import_cyclist_data(args['input'],
                 'dataframes/design_DF_4Tree_2012.pkl')
-        #x_train, x_test, y_train = matio.import_spam_data('spam.mat')
         if args['profile']:
             cProfile.runctx("run_logistic_regression(x_train, y_train, x_test, y_test, args)", 
                     {'run_logistic_regression': run_logistic_regression},
