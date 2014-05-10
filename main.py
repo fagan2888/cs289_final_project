@@ -46,7 +46,7 @@ def init_argument_parser():
             help='Import a precalculated beta from a file')
     return vars(parser.parse_args())
 
-def run_logistic_regression(x_train, y_train, args):
+def run_logistic_regression(x_train, y_train, x_test, y_test, args):
     print 'data loaded'
     if args['method'] == 'logistic-plot':
         logistic_regression.plot_batch_gradient_descent(x_train, y_train,
@@ -54,6 +54,8 @@ def run_logistic_regression(x_train, y_train, args):
                 iterations = args['iterations'], weight_step = False)
     elif args['method'] == 'logistic':
         x_train = logistic_regression.standardize_data(x_train)
+        x_test = logistic_regression.standardize_data(x_test)
+
         if args['beta_file'] is None:
             beta = logistic_regression.calc_cross_validated_beta(x_train,
                     y_train, lam=args['lambda'], 
@@ -72,10 +74,10 @@ def run_logistic_regression(x_train, y_train, args):
 
         beta = np.sum(beta, axis=0)/float(len(beta))
 
-        labels = logistic_regression.calc_labels(x_train, beta)
-        training_error = logistic_regression.calc_error_rate(labels, y_train)
+        labels = logistic_regression.calc_labels(x_test, beta)
+        training_error = logistic_regression.calc_error_rate(labels, y_test)
         print 'training error rate', training_error
-        logistic_regression.write_labels(x_train, beta)
+        logistic_regression.write_labels(x_test, beta)
     elif args['method'] == 'logistic-sklearn':
         x_train = logistic_regression.standardize_data(x_train)
         x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
@@ -125,13 +127,15 @@ def run_decision_trees(args):
 if __name__=="__main__":
     args = init_argument_parser()
     if args['method'].startswith('logistic'):
-        x_train, y_train = util.import_cyclist_data(args['input'])
+        x_train, y_train, x_test, y_test = \
+                util.smart_import_cyclist_data(args['input'],
+                'dataframes/design_DF_4Tree_2012.pkl')
         #x_train, x_test, y_train = matio.import_spam_data('spam.mat')
         if args['profile']:
-            cProfile.runctx("run_logistic_regression(x_train, y_train, args)", 
+            cProfile.runctx("run_logistic_regression(x_train, y_train, x_test, y_test, args)", 
                     {'run_logistic_regression': run_logistic_regression},
                     locals())
         else:
-            run_logistic_regression(x_train, y_train, args)
+            run_logistic_regression(x_train, y_train, x_test, y_test, args)
     else:
         run_decision_trees(args)
