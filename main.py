@@ -73,11 +73,15 @@ def run_logistic_regression(x_train, y_train, x_test, y_test, args):
             cPickle.dump(beta, beta_dumpfile)
 
         beta = np.sum(beta, axis=0)/float(len(beta))
-
-        labels = logistic_regression.calc_labels(x_test, beta)
-        training_error = logistic_regression.calc_error_rate(labels, y_test)
+        training_labels = logistic_regression.calc_labels(x_train, beta)
+        training_error = logistic_regression.calc_error_rate(training_labels, y_train)
         print 'training error rate', training_error
+
+        testing_labels = logistic_regression.calc_labels(x_test, beta)
+        testing_error = logistic_regression.calc_error_rate(testing_labels, y_test)
+        print 'testing error rate', testing_error
         logistic_regression.write_labels(x_test, beta)
+
     elif args['method'] == 'logistic-sklearn':
         x_train = logistic_regression.standardize_data(x_train)
         x_test = logistic_regression.standardize_data(x_test)
