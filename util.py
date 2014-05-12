@@ -116,11 +116,15 @@ def append_labels_to_pickle(filename_with_columns, filename_with_labels):
     file_labels = open(filename_with_labels, 'rb')
     data_columns = cPickle.load(file_columns)
     data_labels = cPickle.load(file_labels)
+    print data_columns.shape, data_labels.shape
+    print max(data_columns.index)
     labels = data_labels['SER_INJ']
-    print data_columns.columns
+    print data_columns.index
+    for i in data_columns.index:
+        data_labels['SER_INJ'].loc[i] = labels[i]
     data_columns['SER_INJ'] = labels
-    print data_columns.columns
-    updated_file_columns = open(filename_with_columns+'withlabels', 'wb')
+    print data_labels.index
+    updated_file_columns = open(filename_with_columns[:-4]+'_with_labels.pkl', 'wb')
     cPickle.dump(data_columns, updated_file_columns)
 
 if __name__ == "__main__":
