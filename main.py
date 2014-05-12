@@ -26,8 +26,10 @@ def init_argument_parser():
             default = 500, help = 'Split the data into a training set and a validation set of the given size')
     parser.add_argument('--iter-validate', dest='iter_validate', type=int,
             default=50, help='Iteratively validate AdaBoost results after the given number of rounds')
-    parser.add_argument('--input', dest='input', type=str,
+    parser.add_argument('--input-train', dest='input_train', type=str,
             default='dataframes/design_DF_4Tree.pkl')
+    parser.add_argument('--input-test', dest='input_test', type=str,
+            default='dataframes/design_DF_4Tree_2012.pkl')
     parser.add_argument('--output', dest='output', type=str,
             default=None, help='Filename to output test results')
     parser.add_argument('-l', '--lambda', dest='lambda', type=float,
@@ -137,8 +139,8 @@ if __name__=="__main__":
     args = init_argument_parser()
     if args['method'].startswith('logistic'):
         x_train, y_train, x_test, y_test = \
-                util.smart_import_cyclist_data(args['input'],
-                'dataframes/design_DF_4Tree_2012.pkl')
+                util.smart_import_cyclist_data(args['input_train'],
+                args['input_test'])
         if args['profile']:
             cProfile.runctx("run_logistic_regression(x_train, y_train, x_test, y_test, args)", 
                     {'run_logistic_regression': run_logistic_regression},
