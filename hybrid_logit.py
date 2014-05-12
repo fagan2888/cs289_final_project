@@ -159,6 +159,8 @@ def design_for_hybrid(orig_nodeAugmented, tree, missing_code=9999):
          
     #missing_value_cols = ["TRAV_SP", "NUMOCCS", "VNUM_LAN", "VSPD_LIM", "DRIVER_AGE"]
     
+    assert "nodeNum" in orig_nodeAugmented.columns
+    
     #Filter the data to avoid perfectly predicting nodes
     filtered = reduce_nodeAugmented_4hybrid(orig_nodeAugmented, tree)
     
@@ -181,7 +183,7 @@ def design_for_hybrid(orig_nodeAugmented, tree, missing_code=9999):
     
     return col_cleaned
     
-def design_for_pure_logit(orig_nodeAugmented, tree, missing_code=9999):
+def design_for_pure_logit(orig_nodeAugmented, missing_code=9999):
     """orig_nodeAugmented = a pandas dataframe containing a "nodeNum" column.
     orig_nodeAugmented should be the design matrix used to build a decision tree, 
     with the subsequently created nodes used to characterize each observation.
@@ -488,19 +490,25 @@ def whittle_multi_model_vars(orig_fitted, base_string):
     #Iterate through all the variables in the model
     for var, val in p_vals.iteritems():
         if "nodeNum" in var:#Ignore the variables denoting leaf node membership
-            pass
+            continue
         elif "Intercept" == var: #Ignore any variables that are intercept terms
-            pass
+            continue
         else: #If a p-value is greater than 0.05, call it the worst variable
             if val > 0.05:
                 worst_var = var
             #Note that the list is in descending order so the first variable
             #identified has the largest p-value of variables which are optional
             break #Break the loop since I have the worst variable
+
     
     if worst_var is not None:        
     #If a worst variable has been identified, then make a copy of the original
     #variables, remove the worst variable from this copy, and return the rest.
+        if np.nan in p_vals.values:
+            nan_vars = p_vals[pd.isnull(p_vals)].index.tolist()
+            if worst_var not in nan_vars:
+                worst_var = nan_vars[0]
+                
         new_vars = deepcopy(orig_vars)
         try:
             assert worst_var in new_vars
@@ -536,9 +544,16 @@ def reduce_multi_model(orig_fitted, base_string, res, df, fit=None):
     #Initialize a variable for the smallest model base_string
     small_base = base_string
     
+    node_variables = isolate_node_cols(df)
+    
     while new_bvars is not None: #If a reduced set of variables has been found
-        new_base = " + ".join(["0"] + new_bvars) #Create a new base_string
-        new_fstring = res + " ~ " + new_base #Create a new statsmodels formula string
+        #new_base = " + ".join(["0"] + new_bvars) #Create a new base_string
+        #new_fstring = res + " ~ " + new_base #Create a new statsmodels formula string
+        
+        model_vars = combat_multi_collinearity(df, new_bvars, node_variables, max_cond=2000)
+        new_base = " + ".join(model_vars) #Create a string of all variables using in the multivariate regression
+        new_fstring = res + " ~ " + "0 + " + new_base #Create the new formula string
+        
         try: #Try to fit a new logistic regression model
         #Use the if...else statement to accomodate various optimization methods
             if fit is None:
@@ -551,10 +566,11 @@ def reduce_multi_model(orig_fitted, base_string, res, df, fit=None):
             small_model = new_model
         #Search for new base variables
             new_bvars =  whittle_multi_model_vars(new_model, new_base)
-        except: #If the model could not be fit, print a message saying so
+        except Exception as inst: #If the model could not be fit, print a message saying so
             print "Estimating logit model failed when using formula: {}".format(new_fstring)
             #Note the line below is un-tested, but I added it because it seemed
             #that an infinite loop would result without it.
+            print inst
             new_bvars = None
 
     #Print the model results of the most reduced model.            
@@ -592,15 +608,16 @@ def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None):
     #List the index values of observations to be classifed by the decision tree
     tree_ind = list(set(tot_ind).difference(set(logit_ind)))
     
-    #Create a design matrix of only observations to be classified by the decision tree
-    tree_matrix = aug_vSet.loc[tree_ind]
-    tree_preds = [] #Initialize a list to store the decision tree's predictions
-    #Iterate over all observations to be classified by the decision tree
-    for ind, row in tree_matrix.iterrows():
-        #Make the prediction with the decision tree and add it to tree_preds
-        tree_preds.append(treepredict.predictWithTree(row, tree, classes))
-    #Convert the tree_preds list into a pandas dataframe, with the appropriate index
-    tree_preds = pd.DataFrame(tree_preds, columns=["Predictions"], index=tree_ind)
+    if len(tree_ind) > 0:
+        #Create a design matrix of only observations to be classified by the decision tree
+        tree_matrix = aug_vSet.loc[tree_ind]
+        tree_preds = [] #Initialize a list to store the decision tree's predictions
+        #Iterate over all observations to be classified by the decision tree
+        for ind, row in tree_matrix.iterrows():
+            #Make the prediction with the decision tree and add it to tree_preds
+            tree_preds.append(treepredict.predictWithTree(row, tree, classes))
+        #Convert the tree_preds list into a pandas dataframe, with the appropriate index
+        tree_preds = pd.DataFrame(tree_preds, columns=["Predictions"], index=tree_ind)
     
     #Isolate the columns needed for the hybrid logit model's design matrix
     cols = fitted.pvalues.index.tolist()
@@ -620,8 +637,12 @@ def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None):
     logit_preds = [1 if x >=0.5 else 0 for x in logit_probs]
     #Turn the list of predictions into a pandas dataframe
     logit_preds = pd.DataFrame(logit_preds, columns=["Predictions"], index= logit_ind)
-    #Re-combine the decision tree and hybrid logit predictions
-    total_preds = pd.concat([logit_preds, tree_preds])
+    
+    if len(tree_ind) > 0:
+        #Re-combine the decision tree and hybrid logit predictions
+        total_preds = pd.concat([logit_preds, tree_preds])
+    else:
+        total_preds = logit_preds
     #Re-order the combined list of prediction to match the original ordering
     total_preds = total_preds.loc[tot_ind]
     #Isolate the true classes from the observations in the validation set
@@ -640,6 +661,15 @@ def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None):
     class_1_err = calc_error(class_1)
     tot_err = calc_error(preds_and_real)
     
+    cond1 = preds_and_real["Predictions"] == 1
+    cond2 = preds_and_real["True Class"] == 1
+    true_positive = len(preds_and_real[cond1 & cond2])
+    test_positive = len(preds_and_real[cond1])
+    actual_positive = len(preds_and_real[cond2])
+    
+    precision = float(true_positive) / test_positive
+    recall = float(true_positive) / actual_positive
+    
     #Print resulting error rates and 
     print "When using the hybrid-CART Logit model, the various errors are: "
     print ""
@@ -650,7 +680,7 @@ def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None):
     print "Note: The number of non-zero logit predictions is {}".format(len(logit_preds[logit_preds["Predictions"] != 0]))
     
     #Return a list of the total, class 0, and class 1 error rates
-    return [tot_err, class_0_err, class_1_err]
+    return [tot_err, class_0_err, class_1_err, precision, recall]
     
 def strip_nodeNum_cols(df):
     """df = a dataframe
@@ -672,10 +702,9 @@ def logit_error_rates(testSet, model, res_string, the_classes, correct_tree):
     Returns a dictionary of the various error rates for the logistic regression"""
     
     #Create a design matrix for use in testing a pure logit model
-    correct_df = design_for_pure_logit(testSet, correct_tree)
+    correct_df = design_for_pure_logit(testSet)
     #Get a list of needed columns in the design matrix based on the fitted model
     req_cols = model.pvalues.index.tolist()
-    
     
     for req_col in req_cols:
     #If the column is not a created column and is not in the design matrix: 
@@ -684,8 +713,9 @@ def logit_error_rates(testSet, model, res_string, the_classes, correct_tree):
         #Make sure the column is in correct_df
         assert req_col in correct_df.columns
     
+    print "Was about to get predicted probabilities"
     #For each observation, get the probability of it being in class 1
-    logit_probabilities = model.predict(exog = correct_df[req_cols], transform = True)
+    logit_probabilities = model.predict(exog = np.array(correct_df[req_cols]), transform = False)
     #Predict each observation's class membership based on its probability above
     logit_predictions = pd.DataFrame([1 if x >= 0.5 else 0 for x in logit_probabilities], columns=["Predictions"],
                                      index = correct_df.index)
@@ -714,7 +744,19 @@ def logit_error_rates(testSet, model, res_string, the_classes, correct_tree):
         state_error = calc_error(obs_in_state)
         print "Class {} Error Rate: {}".format(state,state_error) #Print results
         class_errs.append(state_error) #Add the error rate to class_errs
-    errs = [tot_err] + class_errs #make a list of all error types
+    
+    cond1 = prediction_and_reality["Predictions"] == 1
+    cond2 = prediction_and_reality["True Class"] == 1
+    true_positive = len(prediction_and_reality[cond1 & cond2])
+    test_positive = len(prediction_and_reality[cond1])
+    actual_positive = len(prediction_and_reality[cond2])
+    
+    precision = float(true_positive) / test_positive
+    recall = float(true_positive) / actual_positive
+    
+    errs = [tot_err] + class_errs + [precision, recall] #make a list of all error types
+    print ""
+    print "Note: The number of non-zero logit predictions is {}".format(len(logit_predictions[logit_predictions["Predictions"] == 1]))
     return errs #Return the errors of the pure logit model's predictions.
 
 def predict_with_hybrid_and_tree(data, some_tree, some_model, some_res_string, some_classes):
@@ -739,9 +781,9 @@ def predict_with_hybrid_and_tree(data, some_tree, some_model, some_res_string, s
     tree_errs = treepredict.testAccuracy(data, some_tree, some_classes, some_res_string)
     
     #Combine the errors into a single dataframe
-    all_errs = pd.DataFrame({'Hybrid Error Rates': hybrid_errs,
-                             'Tree Error Rates': tree_errs},
-                            index = ['Total'] + ['Class {}'.format(x) for x in some_classes])
+    all_errs = pd.DataFrame({'Hybrid': hybrid_errs,
+                             'Tree': tree_errs},
+                            index = ['Total Error Rate'] + ['Class {} Error Rate'.format(x) for x in some_classes] + ["Precision", "Recall"])
     return all_errs
 
 def predict_with_hybrid_tree_and_logit(data, some_tree, some_model, some_pure_logit, some_res_string, some_classes):
@@ -770,10 +812,10 @@ def predict_with_hybrid_tree_and_logit(data, some_tree, some_model, some_pure_lo
     logit_errors = logit_error_rates(data, some_pure_logit, some_res_string, some_classes, some_tree)
     
     #Combine the errors into a single dataframe
-    all_errs = pd.DataFrame({'Hybrid Error Rates': hybrid_errs,
-                             'Tree Error Rates': tree_errs,
-                             'Logit Error Rates': logit_errors},
-                            index = ['Total'] + ['Class {}'.format(x) for x in some_classes])
+    all_errs = pd.DataFrame({'Hybrid': hybrid_errs,
+                             'Tree': tree_errs,
+                             'Logit': logit_errors},
+                            index = ['Total Error Rate'] + ['Class {} Error Rate'.format(x) for x in some_classes] + ["Precision", "Recall"])
                             
     return all_errs
     
@@ -823,3 +865,22 @@ def allFeats(fitted, tree):
     #Make a set of variables from the decision tree
     set2 = treepredict.searchFeats(tree)
     return set1.union(set2) #Return the union of the two sets above.
+    
+def make_logit_models(aug_tSet, res, mod_type, tree=None, fit_term=None):
+    if mod_type == "pure":
+        design_4logit = design_for_pure_logit(aug_tSet)
+    elif mod_type == "hybrid":
+        assert tree is not None
+        design_4logit = design_for_hybrid(aug_tSet, tree)
+    else:
+        raise Exception("The model type, mod_type, must be either 'pure' or 'hybrid'. '{}' was entered.".format(mod_type))
+    
+    initial_logit_model, initial_logit_string = initial_multivariate(design_4logit,
+                                                                     res,
+                                                                     biggest_cond=2000,
+                                                                     fit=fit_term)
+    final_logit_model, final__logit_string = reduce_multi_model(initial_logit_model, 
+                                                                initial_logit_string,
+                                                                res, design_4logit,
+                                                                fit=fit_term)
+    return final_logit_model

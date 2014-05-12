@@ -314,6 +314,15 @@ def testAccuracy(testSet, tree, classes, res):
     
     tot_err = calc_prediction_error(preds_and_real)
     
+    cond1 = preds_and_real["Predictions"] == 1
+    cond2 = preds_and_real["True Class"] == 1
+    true_positive = len(preds_and_real[cond1 & cond2])
+    test_positive = len(preds_and_real[cond1])
+    actual_positive = len(preds_and_real[cond2])
+    
+    precision = float(true_positive) / test_positive
+    recall = float(true_positive) / actual_positive
+    
     print "When using the decision tree, its various error rates are:"
     print "Total Error: {}".format(tot_err)
     
@@ -324,7 +333,10 @@ def testAccuracy(testSet, tree, classes, res):
         groups_and_results['groups'][state] = preds_and_real[preds_and_real['True Class'] == state]
         groups_and_results['results'][state] = calc_prediction_error(groups_and_results['groups'][state])
         print "Class {} Error rate: {}".format(state, groups_and_results['results'][state]) 
-    errs = [tot_err] + [groups_and_results['results'][state] for state in classes]
+    errs = [tot_err] + [groups_and_results['results'][state] for state in classes] + [precision, recall]
+
+    print ""
+    print "The number of non-zero decision tree predictions is {}".format(len(preds_and_real[preds_and_real["Predictions"] == 1]))
     return errs #Return the accuracy of the tree's predictions.
     
 def __get_results(node):
