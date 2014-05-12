@@ -88,6 +88,7 @@ def smart_import_cyclist_data(input_filename_2011, input_filename_2012):
     data_2012 = cPickle.load(input_file_2012)
     print data_2011.shape, data_2012.shape
     print type(data_2012.columns)
+    print data_2011.columns
     shared_columns = [col for col in data_2011.columns.values
             if col in data_2012.columns.values]
     print len(shared_columns)
@@ -109,3 +110,20 @@ def extract_xy_from_cyclist_data(cyclist_data):
     #print cyclist_data.info()
     x = cyclist_data.values
     return x, y
+
+def append_labels_to_pickle(filename_with_columns, filename_with_labels):
+    file_columns = open(filename_with_columns, 'rb')
+    file_labels = open(filename_with_labels, 'rb')
+    data_columns = cPickle.load(file_columns)
+    data_labels = cPickle.load(file_labels)
+    labels = data_labels['SER_INJ']
+    print data_columns.columns
+    data_columns['SER_INJ'] = labels
+    print data_columns.columns
+    updated_file_columns = open(filename_with_columns+'withlabels', 'wb')
+    cPickle.dump(data_columns, updated_file_columns)
+
+if __name__ == "__main__":
+    append_labels_to_pickle('xtrain_for_kevin.pkl', 'dataframes/design_DF_4Tree.pkl')
+    
+    
