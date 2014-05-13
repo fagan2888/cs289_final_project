@@ -102,36 +102,39 @@ def run_decision_trees(x_train, y_train, x_test, y_test, args):
     if args['shuffle']:
         x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
 
-    if args['validate']>0:
-        validation_size = args['validate']
-        crashes = x_train[validation_size:]
-        labels = y_train[validation_size:]
-        crashes_validate = x_train[:validation_size]
-        labels_validate = y_train[:validation_size]
-    elif args['validate']==0:
+    #Allow validation without external testing data
+    if x_test is None or x_test == x_train:
+        if args['validate']>0:
+            validation_size = args['validate']
+            crashes = x_train[validation_size:]
+            labels = y_train[validation_size:]
+            crashes_validate = x_train[:validation_size]
+            labels_validate = y_train[:validation_size]
+        elif args['validate']==0:
+            crashes = x_train
+            labels = y_train
+            crashes_validate = crashes
+            labels_validate = labels
+        else:
+            #Check the training set error rate - useful for debugging 
+            validation_size = args['validate']
+            crashes = x_train[-validation_size:]
+            labels = y_train[-validation_size:]
+            crashes_validate = crashes
+            labels_validate = labels
+
+        x_test = crashes_validate
+    else:
         crashes = x_train
         labels = y_train
-        crashes_validate = crashes
-        labels_validate = labels
-    else:
-        #Check the training set error rate - useful for debugging 
-        validation_size = args['validate']
-        crashes = x_train[-validation_size:]
-        labels = y_train[-validation_size:]
-        crashes_validate = crashes
-        labels_validate = labels
-
-    x_test = crashes_validate
+        crashes_validate = x_test
+        labels_validate = y_test
 
     if args['tree_size']==0:
         args['tree_size'] = len(crashes)
 
-    if args['profile']:
-        cProfile.runctx('decision_trees.do_stuff(crashes, labels, crashes_validate, labels_validate, x_test, args)', 
-                {'decision_trees': decision_trees}, locals())
-    else:
-        decision_trees.do_stuff(crashes, labels, crashes_validate,
-                labels_validate, x_test, args)
+    decision_trees.do_stuff(crashes, labels, crashes_validate,
+            labels_validate, x_test, args)
 
 if __name__=="__main__":
     args = init_argument_parser()
