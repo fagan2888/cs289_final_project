@@ -2,6 +2,7 @@ import bisect
 import random
 import numpy as np
 import cPickle
+import re
 
 def count_unique_values(iterable):
     temp = set()
@@ -111,21 +112,36 @@ def extract_xy_from_cyclist_data(cyclist_data):
     x = cyclist_data.values
     return x, y
 
-def append_labels_to_pickle(filename_with_columns, filename_with_labels):
-    file_columns = open(filename_with_columns, 'rb')
+def append_labels_to_pickle(filename_with_features, filename_with_labels):
+    file_features = open(filename_with_features, 'rb')
     file_labels = open(filename_with_labels, 'rb')
-    data_columns = cPickle.load(file_columns)
+    data_features = cPickle.load(file_features)
     data_labels = cPickle.load(file_labels)
-    print data_columns.shape, data_labels.shape
-    print max(data_columns.index)
+    data_features.columns = [clean_column_name(name) for name in data_features.columns]
+    data_labels.columns = [clean_column_name(name) for name in data_labels.columns]
+    shared_columns = [col for col in data_features.columns.values
+            if col in data_labels.columns.values]
+    print shared_columns
     labels = data_labels['SER_INJ']
-    print data_columns.index
-    for i in data_columns.index:
+    print data_features.index
+    for i in data_features.index:
         data_labels['SER_INJ'].loc[i] = labels[i]
-    data_columns['SER_INJ'] = labels
+        for column in shared_columns:
+            if not data_labels[column].loc[i] == data_features[column].loc[i]:
+                print "ERROR: Columns don't match"
+    data_features['SER_INJ'] = labels
     print data_labels.index
-    updated_file_columns = open(filename_with_columns[:-4]+'_with_labels.pkl', 'wb')
-    cPickle.dump(data_columns, updated_file_columns)
+    updated_file_features = open(filename_with_features[:-4]+'_with_labels.pkl', 'wb')
+    cPickle.dump(data_features, updated_file_features)
+
+def clean_column_name(name):
+    if name[:2] == 'C(':
+        name = re.sub(r'C\(', '', name)
+        name = re.sub(r',.*T\.(\d+)\]', r'_T\1', name)
+        name = re.sub(r'\).*T\.(\d+)\]', r'_T\1', name)
+        return name
+    name = re.sub('_Treatment.*T(\d+)', r'_T\1', name)
+    return name
 
 if __name__ == "__main__":
     append_labels_to_pickle('xtrain_for_kevin.pkl', 'dataframes/design_DF_4Tree.pkl')
