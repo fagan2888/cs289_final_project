@@ -123,14 +123,12 @@ def append_labels_to_pickle(filename_with_features, filename_with_labels):
             if col in data_labels.columns.values]
     print shared_columns
     labels = data_labels['SER_INJ']
-    print data_features.index
     for i in data_features.index:
         data_labels['SER_INJ'].loc[i] = labels[i]
         for column in shared_columns:
             if not data_labels[column].loc[i] == data_features[column].loc[i]:
                 print "ERROR: Columns don't match"
     data_features['SER_INJ'] = labels
-    print data_labels.index
     updated_file_features = open(filename_with_features[:-4]+'_with_labels.pkl', 'wb')
     cPickle.dump(data_features, updated_file_features)
 
