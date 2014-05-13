@@ -26,8 +26,10 @@ def init_argument_parser():
             default = 500, help = 'Split the data into a training set and a validation set of the given size')
     parser.add_argument('--iter-validate', dest='iter_validate', type=int,
             default=50, help='Iteratively validate AdaBoost results after the given number of rounds')
-    parser.add_argument('--input', dest='input', type=str,
+    parser.add_argument('--input-train', dest='input_train', type=str,
             default='dataframes/design_DF_4Tree.pkl')
+    parser.add_argument('--input-test', dest='input_test', type=str,
+            default='dataframes/design_DF_4Tree_2012.pkl')
     parser.add_argument('--output', dest='output', type=str,
             default=None, help='Filename to output test results')
     parser.add_argument('-l', '--lambda', dest='lambda', type=float,
@@ -44,9 +46,13 @@ def init_argument_parser():
             action='store_true', help='Store beta in an external file?')
     parser.add_argument('--beta-file', dest='beta_file', type=str, default=None,
             help='Import a precalculated beta from a file')
+    parser.add_argument('--use-nll', dest='use_nll', default=True,
+            action='store_false', help='Skip calculating NLL')
+    parser.add_argument('--plot-nll', dest='plot_nll', default=False,
+            action='store_true', help='Plot NLL')
     return vars(parser.parse_args())
 
-def run_logistic_regression(x_train, y_train, args):
+def run_logistic_regression(x_train, y_train, x_test, y_test, args):
     print 'data loaded'
     if args['method'] == 'logistic-plot':
         logistic_regression.plot_batch_gradient_descent(x_train, y_train,
@@ -54,12 +60,15 @@ def run_logistic_regression(x_train, y_train, args):
                 iterations = args['iterations'], weight_step = False)
     elif args['method'] == 'logistic':
         x_train = logistic_regression.standardize_data(x_train)
+        x_test = logistic_regression.standardize_data(x_test)
+
         if args['beta_file'] is None:
             beta = logistic_regression.calc_cross_validated_beta(x_train,
                     y_train, lam=args['lambda'], 
                     step_size = args['step_size'],
                     iterations=args['iterations'], weight_step = False,
-                    k=args['k'])
+                    k=args['k'], use_nll = args['use_nll'],
+                    plot_nll = args['plot_nll'])
         else:
             inputfile = open(args['beta_file'], 'rb')
             beta = cPickle.load(inputfile)
@@ -71,67 +80,83 @@ def run_logistic_regression(x_train, y_train, args):
             cPickle.dump(beta, beta_dumpfile)
 
         beta = np.sum(beta, axis=0)/float(len(beta))
-
-        labels = logistic_regression.calc_labels(x_train, beta)
-        training_error = logistic_regression.calc_error_rate(labels, y_train)
+        training_labels = logistic_regression.calc_labels(x_train, beta)
+        training_error = logistic_regression.calc_error_rate(training_labels, y_train)
         print 'training error rate', training_error
-        logistic_regression.write_labels(x_train, beta)
+
+        testing_labels = logistic_regression.calc_labels(x_test, beta)
+        testing_error = logistic_regression.calc_error_rate(testing_labels, y_test)
+        print 'testing error rate', testing_error
+        logistic_regression.write_labels(x_test, beta)
+
     elif args['method'] == 'logistic-sklearn':
         x_train = logistic_regression.standardize_data(x_train)
+        x_test = logistic_regression.standardize_data(x_test)
         x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
         logistic = LogisticRegression()
-        fold_size = 100
-        logistic.fit(x_train[fold_size:], y_train[fold_size:])
-        print logistic.score(x_train[:fold_size], y_train[:fold_size])
+        logistic.fit(x_train, y_train)
+        print logistic.score(x_test, y_test)
 
-def run_decision_trees(args):
-    x_train, y_train = util.import_cyclist_data(args['input'])
-    #x_train, x_test, y_train = matio.import_spam_data('spam.mat')
+def run_decision_trees(x_train, y_train, x_test, y_test, args):
 
-    if args['shuffle']:
-        x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
 
-    if args['validate']>0:
-        validation_size = args['validate']
-        crashes = x_train[validation_size:]
-        labels = y_train[validation_size:]
-        crashes_validate = x_train[:validation_size]
-        labels_validate = y_train[:validation_size]
-    elif args['validate']==0:
+    #Allow validation without external testing data
+    if x_test is None or np.array_equal(x_test,x_train):
+        if args['shuffle']:
+            x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
+        print 'no test data found'
+        if args['validate']>0:
+            validation_size = args['validate']
+            crashes = x_train[validation_size:]
+            labels = y_train[validation_size:]
+            crashes_validate = x_train[:validation_size]
+            labels_validate = y_train[:validation_size]
+        elif args['validate']==0:
+            crashes = x_train
+            labels = y_train
+            crashes_validate = crashes
+            labels_validate = labels
+        else:
+            #Check the training set error rate - useful for debugging 
+            validation_size = args['validate']
+            crashes = x_train[-validation_size:]
+            labels = y_train[-validation_size:]
+            crashes_validate = crashes
+            labels_validate = labels
+
+        x_test = crashes_validate
+    else:
+        if args['shuffle']:
+            x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
         crashes = x_train
         labels = y_train
-        crashes_validate = crashes
-        labels_validate = labels
-    else:
-        #Check the training set error rate - useful for debugging 
-        validation_size = args['validate']
-        crashes = x_train[-validation_size:]
-        labels = y_train[-validation_size:]
-        crashes_validate = crashes
-        labels_validate = labels
-
-    x_test = crashes_validate
+        crashes_validate = x_test
+        labels_validate = y_test
 
     if args['tree_size']==0:
         args['tree_size'] = len(crashes)
 
-    if args['profile']:
-        cProfile.runctx('decision_trees.do_stuff(crashes, labels, crashes_validate, labels_validate, x_test, args)', 
-                {'decision_trees': decision_trees}, locals())
-    else:
-        decision_trees.do_stuff(crashes, labels, crashes_validate,
-                labels_validate, x_test, args)
+    decision_trees.do_stuff(crashes, labels, crashes_validate,
+            labels_validate, x_test, args)
 
 if __name__=="__main__":
     args = init_argument_parser()
+    if args['input_test']=='train':
+        args['input_test'] = args['input_train']
+    x_train, y_train, x_test, y_test = \
+            util.smart_import_cyclist_data(args['input_train'],
+            args['input_test'])
     if args['method'].startswith('logistic'):
-        x_train, y_train = util.import_cyclist_data(args['input'])
-        #x_train, x_test, y_train = matio.import_spam_data('spam.mat')
         if args['profile']:
-            cProfile.runctx("run_logistic_regression(x_train, y_train, args)", 
+            cProfile.runctx("run_logistic_regression(x_train, y_train, x_test, y_test, args)", 
                     {'run_logistic_regression': run_logistic_regression},
                     locals())
         else:
-            run_logistic_regression(x_train, y_train, args)
+            run_logistic_regression(x_train, y_train, x_test, y_test, args)
     else:
-        run_decision_trees(args)
+        if args['profile']:
+            cProfile.runctx("run_decision_trees(x_train, y_train, x_test, y_test, args)",
+                    {'run_decision_trees': run_decision_trees},
+                    locals())
+        else:
+            run_decision_trees(x_train, y_train, x_test, y_test, args)

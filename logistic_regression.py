@@ -27,6 +27,10 @@ def get_col(train, col_index):
 
 #http://stackoverflow.com/questions/4544292/how-do-i-standardize-a-matrix
 def standardize_col(col):
+    #If the column has few unique values, it is probably categorical
+    #So don't standardize it
+    if len(set(col))<5:
+        return col
     mean = np.mean(col)
     std_dev = np.std(col)
     if std_dev == 0:
@@ -145,7 +149,7 @@ def run_batch_gradient_descent(x, y, lam, step_size, iterations, weight_step,
         #Check every 5 iterations to see if we have made sufficient progress
         #If we aren't changing the NLL anymore, no point in continuing
         if i>10 and i % 5 == 0 and made_insufficient_progress(nll,
-                threshold = 0.00000001):
+                threshold = 1e-6):
             print i, 'Insufficient progress made'
             break
     return nll, beta
@@ -222,33 +226,35 @@ def find_approximate_C_exp(images, labels, k, exp_range, **kwargs):
 
 #All x and y data here comes from a training set
 #the _train and _test labels are used in the context of the cross-validation
-def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations, weight_step,
-        k):
+def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations,
+        weight_step, k, use_nll, plot_nll):
     #shuffle x_full and y_full so we can crossvalidate
     feature_count = len(x_full[0])
     x_full, y_full = util.shuffle(x_full, y_full, to_numpy_array = True)
     beta_all = np.zeros(shape=(k, feature_count))
-    error_rates = np.empty(shape=k)
+    validation_error_rates = np.empty(shape=k)
     nll = [None]*k
     for i in xrange(k):
         x_train, x_test = extract_fold(x_full, i, k)
         y_train, y_test = extract_fold(y_full, i, k)
         #This alters beta_all and possibly nll
         nll[i], beta_all[i] = run_batch_gradient_descent(x_train, y_train, lam,
-                step_size, iterations, weight_step, use_nll = True)
+                step_size, iterations, weight_step, use_nll = use_nll)
         test_labels_calc = calc_labels(x_test, beta_all[i])
-        error_rates[i] = calc_error_rate(test_labels_calc, y_test)
-        print 'cross-validation error rate', error_rates[i]
+        validation_error_rates[i] = calc_error_rate(test_labels_calc, y_test)
+        print 'cross-validation error rate', validation_error_rates[i]
         training_labels = calc_labels(x_train, beta_all[i])
         print 'training error rate', calc_error_rate(training_labels, y_train),
         full_labels = calc_labels(x_full, beta_all[i])
         print 'full', calc_error_rate(full_labels, y_full)
-        #plot_nll_data(nll[i], 'derp')
+        if plot_nll and use_nll:
+            plot_nll_data(nll[i], 'derp')
     #Take the average beta among all betas calculated during cross-validation
     #beta = np.sum(beta_all, axis=0)/float(len(beta_all))
-    for i in xrange(len(error_rates)):
-        print i, nll[i][-1], error_rates[i]
-    print 'avg error rate', np.mean(error_rates)
+    if use_nll:
+        for i in xrange(len(validation_error_rates)):
+            print i, nll[i][-1], validation_error_rates[i]
+    print 'avg error rate', np.mean(validation_error_rates)
     return beta_all
         
 def calc_labels(x, beta):
