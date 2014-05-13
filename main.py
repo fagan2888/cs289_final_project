@@ -97,9 +97,7 @@ def run_logistic_regression(x_train, y_train, x_test, y_test, args):
         logistic.fit(x_train, y_train)
         print logistic.score(x_test, y_test)
 
-def run_decision_trees(args):
-    x_train, y_train = util.import_cyclist_data(args['input'])
-    #x_train, x_test, y_train = matio.import_spam_data('spam.mat')
+def run_decision_trees(x_train, y_train, x_test, y_test, args):
 
     if args['shuffle']:
         x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
@@ -137,10 +135,10 @@ def run_decision_trees(args):
 
 if __name__=="__main__":
     args = init_argument_parser()
+    x_train, y_train, x_test, y_test = \
+            util.smart_import_cyclist_data(args['input_train'],
+            args['input_test'])
     if args['method'].startswith('logistic'):
-        x_train, y_train, x_test, y_test = \
-                util.smart_import_cyclist_data(args['input_train'],
-                args['input_test'])
         if args['profile']:
             cProfile.runctx("run_logistic_regression(x_train, y_train, x_test, y_test, args)", 
                     {'run_logistic_regression': run_logistic_regression},
@@ -148,4 +146,4 @@ if __name__=="__main__":
         else:
             run_logistic_regression(x_train, y_train, x_test, y_test, args)
     else:
-        run_decision_trees(args)
+        run_decision_trees(x_train, y_train, x_test, y_test, args)
