@@ -117,18 +117,26 @@ def append_labels_to_pickle(filename_with_features, filename_with_labels):
     file_labels = open(filename_with_labels, 'rb')
     data_features = cPickle.load(file_features)
     data_labels = cPickle.load(file_labels)
+    original_columns = list(data_features.columns)
     data_features.columns = [clean_column_name(name) for name in data_features.columns]
     data_labels.columns = [clean_column_name(name) for name in data_labels.columns]
     shared_columns = [col for col in data_features.columns.values
             if col in data_labels.columns.values]
     print shared_columns
-    labels = data_labels['SER_INJ']
-    for i in data_features.index:
-        data_labels['SER_INJ'].loc[i] = labels[i]
+    labels_in_original_order = data_labels['SER_INJ']
+    print len(data_features)
+    labels_in_new_order = [None]*len(data_features)
+    for i in xrange(len(labels_in_new_order)):
+        new_index = data_features.index[i]
+        labels_in_new_order[i] = data_labels['SER_INJ'].loc[new_index]
         for column in shared_columns:
-            if not data_labels[column].loc[i] == data_features[column].loc[i]:
+            if not data_labels[column].loc[new_index] == data_features[column].loc[new_index]:
                 print "ERROR: Columns don't match"
-    data_features['SER_INJ'] = labels
+    #Add the labels to the data_features object
+    data_features['SER_INJ'] = labels_in_new_order
+    #Use the original column names to maintain compatibility 
+    original_columns.append('SER_INJ')
+    data_features.columns = original_columns
     updated_file_features = open(filename_with_features[:-4]+'_with_labels.pkl', 'wb')
     cPickle.dump(data_features, updated_file_features)
 
