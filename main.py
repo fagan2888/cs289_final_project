@@ -99,11 +99,12 @@ def run_logistic_regression(x_train, y_train, x_test, y_test, args):
 
 def run_decision_trees(x_train, y_train, x_test, y_test, args):
 
-    if args['shuffle']:
-        x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
 
     #Allow validation without external testing data
-    if x_test is None or x_test == x_train:
+    if x_test is None or np.array_equal(x_test,x_train):
+        if args['shuffle']:
+            x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
+        print 'no test data found'
         if args['validate']>0:
             validation_size = args['validate']
             crashes = x_train[validation_size:]
@@ -125,6 +126,8 @@ def run_decision_trees(x_train, y_train, x_test, y_test, args):
 
         x_test = crashes_validate
     else:
+        if args['shuffle']:
+            x_train, y_train = util.shuffle(x_train, y_train, to_numpy_array = True)
         crashes = x_train
         labels = y_train
         crashes_validate = x_test
@@ -138,6 +141,8 @@ def run_decision_trees(x_train, y_train, x_test, y_test, args):
 
 if __name__=="__main__":
     args = init_argument_parser()
+    if args['input_test']=='train':
+        args['input_test'] = args['input_train']
     x_train, y_train, x_test, y_test = \
             util.smart_import_cyclist_data(args['input_train'],
             args['input_test'])
