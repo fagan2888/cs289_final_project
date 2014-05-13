@@ -232,7 +232,7 @@ def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations,
     feature_count = len(x_full[0])
     x_full, y_full = util.shuffle(x_full, y_full, to_numpy_array = True)
     beta_all = np.zeros(shape=(k, feature_count))
-    error_rates = np.empty(shape=k)
+    validation_error_rates = np.empty(shape=k)
     nll = [None]*k
     for i in xrange(k):
         x_train, x_test = extract_fold(x_full, i, k)
@@ -241,8 +241,8 @@ def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations,
         nll[i], beta_all[i] = run_batch_gradient_descent(x_train, y_train, lam,
                 step_size, iterations, weight_step, use_nll = use_nll)
         test_labels_calc = calc_labels(x_test, beta_all[i])
-        error_rates[i] = calc_error_rate(test_labels_calc, y_test)
-        print 'cross-validation error rate', error_rates[i]
+        validation_error_rates[i] = calc_error_rate(test_labels_calc, y_test)
+        print 'cross-validation error rate', validation_error_rates[i]
         training_labels = calc_labels(x_train, beta_all[i])
         print 'training error rate', calc_error_rate(training_labels, y_train),
         full_labels = calc_labels(x_full, beta_all[i])
@@ -252,9 +252,9 @@ def calc_cross_validated_beta(x_full, y_full, lam, step_size, iterations,
     #Take the average beta among all betas calculated during cross-validation
     #beta = np.sum(beta_all, axis=0)/float(len(beta_all))
     if use_nll:
-        for i in xrange(len(error_rates)):
-            print i, nll[i][-1], error_rates[i]
-    print 'avg error rate', np.mean(error_rates)
+        for i in xrange(len(validation_error_rates)):
+            print i, nll[i][-1], validation_error_rates[i]
+    print 'avg error rate', np.mean(validation_error_rates)
     return beta_all
         
 def calc_labels(x, beta):
