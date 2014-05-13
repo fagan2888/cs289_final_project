@@ -89,7 +89,6 @@ def smart_import_cyclist_data(input_filename_2011, input_filename_2012):
     data_2012 = cPickle.load(input_file_2012)
     print data_2011.shape, data_2012.shape
     print type(data_2012.columns)
-    print data_2011.columns
     shared_columns = [col for col in data_2011.columns.values
             if col in data_2012.columns.values]
     print len(shared_columns)
