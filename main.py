@@ -146,4 +146,9 @@ if __name__=="__main__":
         else:
             run_logistic_regression(x_train, y_train, x_test, y_test, args)
     else:
-        run_decision_trees(x_train, y_train, x_test, y_test, args)
+        if args['profile']:
+            cProfile.runctx("run_decision_trees(x_train, y_train, x_test, y_test, args)",
+                    {'run_decision_trees': run_decision_trees},
+                    locals())
+        else:
+            run_decision_trees(x_train, y_train, x_test, y_test, args)
