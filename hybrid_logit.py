@@ -2,6 +2,22 @@ import numpy as np, pandas as pd, statsmodels.formula.api as smf
 import treepredict, patsy, sys
 from copy import deepcopy
 
+
+def split_data(df, pruning_proportion):
+    """df = the dataframe that you want to split into a training and pruning set
+    pruning_proportion = the decimal representing the percentage of rows of df to be set aside as the pruning set
+    ==========
+    Returns two dataframes, the training set and the pruning set."""
+    
+    assert isinstance(df, pd.DataFrame) #Make sure df is a pandas dataframe
+    assert pruning_proportion <= 1 and pruning_proportion >= 0 #Make sure the pruning_proportion is between 0 and 1
+    
+    rows = df.index.tolist() #Get a list of the rows in the dataframe
+    np.random.shuffle(rows) #Randomly shuffle the list of rows in the dataframe
+    splitNum = round(pruning_proportion * len(rows)) #Find the position in rows that will be closest to the desired proportion
+    training_rows, pruning_rows = rows[splitNum:], rows[:splitNum] #split the data
+    return training_rows, pruning_rows
+
 def find_perfect_preds(nodes):
     """nodes = a list of nodes returned by calling treepredict.fetchnodes() on a
     particular decision tree.
@@ -286,8 +302,8 @@ def combat_multi_collinearity(df, variables, must_include, max_cond=None):
         to_check, current_cond_no = remove_collinear_var(df, to_check, must_include)
         if len(to_check) == 0: #If no more variables to remove, simply return the variables that must be included in the model
             return must_include
-    print "The condition number of the dataset and reduced variable list is {}".format(current_cond_no)
-    print "There are {} variables currently in the model.".format(len(to_check + must_include))
+    #print "The condition number of the dataset and reduced variable list is {}".format(current_cond_no)
+    #print "There are {} variables currently in the model.".format(len(to_check + must_include))
     return to_check + must_include
 
 def remove_collinear_var(df, check_vars, include_vars):
@@ -306,7 +322,7 @@ def remove_collinear_var(df, check_vars, include_vars):
     while worst_var is None: #Keep removing variables until a 'worst_variable' is found, i.e. when the lowest_cond_no is reduced.
         bad_var, cond_no = find_most_collinear_var(df, new_to_check, include_vars) #Find most collinear variable in new_to_check
         if cond_no < lowest_cond_no: #Check if the condition number achieved by removing bad_var is lower than lowest_cond_no
-            print "I found a worst variable. The condition number is now {}".format(cond_no)
+            #print "I found a worst variable. The condition number is now {}".format(cond_no)
             lowest_cond_no = cond_no #If so, update the variable assignment for lowest_cond_no and 
             worst_var = bad_var #Assign worst_var to the variable bad_var
         if worst_var is None: #If the condition number achieved by removing bad_var is not lower than lowest_cond_no
@@ -361,9 +377,9 @@ def check_initial_specification(dataframe, result_string, new_var, min_specifica
     
     #Fit the logistic regression
     if fit_word is None:
-        model = smf.logit(fString, data=dataframe).fit(start_params = start_vals, maxiter=2000)
+        model = smf.logit(fString, data=dataframe).fit(start_params = start_vals, maxiter=2000, disp=False)
     else:
-        model = smf.logit(fString, data=dataframe).fit(method=fit_word, start_params = start_vals, maxiter=2000)
+        model = smf.logit(fString, data=dataframe).fit(method=fit_word, start_params = start_vals, maxiter=2000, disp=False)
         
     if not model.mle_retvals["converged"]: #Check if the model converged
         #If it did not, raise an error
@@ -413,7 +429,7 @@ def initial_multivariate(df, res, missing_value=9999, base_string=None, biggest_
         if var in cols: #If the base variable is in cols, remove it
             cols.remove(var) #Make sure cols only has variables to be added to the model, not variables already in the model
     
-    print multi_cols
+    #print multi_cols
     for var1, var2 in multi_cols: #Iterate through the sets of columns that are to remain together
         #check if each of the variables in the set are in cols, and if they are present, remove them from cols
         if var1 in cols:
@@ -438,32 +454,32 @@ def initial_multivariate(df, res, missing_value=9999, base_string=None, biggest_
                 if isinstance(col, str):
                     possible_vars.append(col)
         except Exception as inst:
-            print inst
+            #print inst
             if "did not converge" in str(inst):
                 problems.append(col)
         except:
-            print "Program encountered an unexpected error on column {}".format(col)
+            #print "Program encountered an unexpected error on column {}".format(col)
             problems.append(col)
             
     
-    print "="*10 #Separate the next line from the printed things above
-    print "" #Place an empty line of whitespace
-    print "There were estimation problems with at least {} variables. The problematic columns were: ".format(len(problems))
-    print problems
-    print "="*10 #Separate the line above from the next printed thing below
-    print "" #Place an empty line of whitespace
-    print "The possible variables being fed to combat_multi_collinearity are: "
-    print possible_vars
+    #print "="*10 #Separate the next line from the printed things above
+    #print "" #Place an empty line of whitespace
+    #print "There were estimation problems with at least {} variables. The problematic columns were: ".format(len(problems))
+    #print problems
+    #print "="*10 #Separate the line above from the next printed thing below
+    #print "" #Place an empty line of whitespace
+    #print "The possible variables being fed to combat_multi_collinearity are: "
+    #print possible_vars
     
     #Reduce possible_vars to a list of linearly independent variables with a condition number < the specifed condition number
     model_vars = combat_multi_collinearity(df, possible_vars, base_vars, max_cond=biggest_cond)
     new_b_string = " + ".join(model_vars) #Create a string of all variables using in the multivariate regression
     new_fString = res + " ~ " + "0 + " + new_b_string #Create the new formula string
     if fit is None:
-        multi_model = smf.logit(new_fString, data = df).fit(maxiter=2000) #fit the initial multi-variate logistic regression
+        multi_model = smf.logit(new_fString, data = df).fit(maxiter=2000, disp=False) #fit the initial multi-variate logistic regression
     else:
-        multi_model = smf.logit(new_fString, data = df).fit(method=fit, maxiter=2000)
-    print multi_model.summary() #Look at the sumary statistics from this logistic regression
+        multi_model = smf.logit(new_fString, data = df).fit(method=fit, maxiter=2000, disp=False)
+    #print multi_model.summary() #Look at the sumary statistics from this logistic regression
     base_string = None #Clean up and reset the variable to none. Not sure if it's necessary but it might not hurt
     return multi_model, new_b_string #return the fitted model and base string used in the model
     
@@ -557,9 +573,9 @@ def reduce_multi_model(orig_fitted, base_string, res, df, fit=None):
         try: #Try to fit a new logistic regression model
         #Use the if...else statement to accomodate various optimization methods
             if fit is None:
-                new_model = smf.logit(new_fstring, data = df).fit(maxiter=2000)
+                new_model = smf.logit(new_fstring, data = df).fit(maxiter=2000, disp=False)
             else:
-                new_model = smf.logit(new_fstring, data = df).fit(method=fit, maxiter=2000)
+                new_model = smf.logit(new_fstring, data = df).fit(method=fit, maxiter=2000, disp=False)
         #Assign small_base to the smallest identified set of base variables so far
             small_base = " + ".join(new_bvars)  
         #Assign small_model to the model with smallest set of base variables so far
@@ -567,16 +583,16 @@ def reduce_multi_model(orig_fitted, base_string, res, df, fit=None):
         #Search for new base variables
             new_bvars =  whittle_multi_model_vars(new_model, new_base)
         except Exception as inst: #If the model could not be fit, print a message saying so
-            print "Estimating logit model failed when using formula: {}".format(new_fstring)
+            #print "Estimating logit model failed when using formula: {}".format(new_fstring)
             #Note the line below is un-tested, but I added it because it seemed
             #that an infinite loop would result without it.
-            print inst
+            #print inst
             new_bvars = None
 
     #Print the model results of the most reduced model.            
-    print "="*10
-    print "The reduced model results are:"
-    print small_model.summary()
+    #print "="*10
+    #print "The reduced model results are:"
+    #print small_model.summary()
     
     return small_model, small_base
     
@@ -598,7 +614,7 @@ def calc_error(data):
             count_err += 1 #If it does not, increment count_err by one
     return float(count_err)/tot #Return the error rate value for data.
       
-def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None):
+def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None, thresh=0.5):
     #List the index values in aug_vSet
     tot_ind = aug_vSet.index.tolist()
     #Create a design matrix for the observations to be classified via the hybrid logit model
@@ -615,7 +631,7 @@ def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None):
         #Iterate over all observations to be classified by the decision tree
         for ind, row in tree_matrix.iterrows():
             #Make the prediction with the decision tree and add it to tree_preds
-            tree_preds.append(treepredict.predictWithTree(row, tree, classes))
+            tree_preds.append(treepredict.predictWithTree(row, tree, classes, d_boundary = thresh))
         #Convert the tree_preds list into a pandas dataframe, with the appropriate index
         tree_preds = pd.DataFrame(tree_preds, columns=["Predictions"], index=tree_ind)
     
@@ -634,7 +650,7 @@ def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None):
     #Get probabilities of being in class 1 from the statsmodel predict() function
     logit_probs = fitted.predict(exog = final_logit_design, transform=False)
     #Get predictions based on the probabilites above
-    logit_preds = [1 if x >=0.5 else 0 for x in logit_probs]
+    logit_preds = [1 if x >=thresh else 0 for x in logit_probs]
     #Turn the list of predictions into a pandas dataframe
     logit_preds = pd.DataFrame(logit_preds, columns=["Predictions"], index= logit_ind)
     
@@ -667,7 +683,12 @@ def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None):
     test_positive = len(preds_and_real[cond1])
     actual_positive = len(preds_and_real[cond2])
     
-    precision = float(true_positive) / test_positive
+    try:
+        precision = float(true_positive) / test_positive
+    except Exception as inst:
+        #print inst
+        precision = np.nan
+        
     recall = float(true_positive) / actual_positive
     
     #Print resulting error rates and 
@@ -692,7 +713,7 @@ def strip_nodeNum_cols(df):
             del df[var] #Delete it from the dataframe
     return
 
-def logit_error_rates(testSet, model, res_string, the_classes, correct_tree):
+def logit_error_rates(testSet, model, res_string, the_classes, correct_tree, d_bound=0.5):
     """testSet = a node augmented dataframe on which predictions are to be made
     model = the fitted logistic regression model which will make predictions on data
     res_string = The string for the column name in testSet that has the classes.
@@ -713,11 +734,10 @@ def logit_error_rates(testSet, model, res_string, the_classes, correct_tree):
         #Make sure the column is in correct_df
         assert req_col in correct_df.columns
     
-    print "Was about to get predicted probabilities"
     #For each observation, get the probability of it being in class 1
     logit_probabilities = model.predict(exog = np.array(correct_df[req_cols]), transform = False)
     #Predict each observation's class membership based on its probability above
-    logit_predictions = pd.DataFrame([1 if x >= 0.5 else 0 for x in logit_probabilities], columns=["Predictions"],
+    logit_predictions = pd.DataFrame([1 if x >= d_bound else 0 for x in logit_probabilities], columns=["Predictions"],
                                      index = correct_df.index)
     
     #Isolate the series of actual class memberships
@@ -751,7 +771,12 @@ def logit_error_rates(testSet, model, res_string, the_classes, correct_tree):
     test_positive = len(prediction_and_reality[cond1])
     actual_positive = len(prediction_and_reality[cond2])
     
-    precision = float(true_positive) / test_positive
+    try:
+        precision = float(true_positive) / test_positive
+    except Exception as inst:
+        #print inst
+        precision = np.nan
+        
     recall = float(true_positive) / actual_positive
     
     errs = [tot_err] + class_errs + [precision, recall] #make a list of all error types
@@ -759,7 +784,7 @@ def logit_error_rates(testSet, model, res_string, the_classes, correct_tree):
     print "Note: The number of non-zero logit predictions is {}".format(len(logit_predictions[logit_predictions["Predictions"] == 1]))
     return errs #Return the errors of the pure logit model's predictions.
 
-def predict_with_hybrid_and_tree(data, some_tree, some_model, some_res_string, some_classes):
+def predict_with_hybrid_and_tree(data, some_tree, some_model, some_res_string, some_classes, threshold=0.5):
     """data = a node augmented dataframe on which predictions are to be made
     some_tree = the decision tree that will be used to make predictions on data
     some_model = the hybrid CART-Logit model which will make predictions on data
@@ -770,7 +795,7 @@ def predict_with_hybrid_and_tree(data, some_tree, some_model, some_res_string, s
     model and the decision tree"""
     
     #Get a list of the various error rates as achieved by the hybrid logit model
-    hybrid_errs = hybrid_classify(data, some_tree, some_model, some_res_string, some_classes)
+    hybrid_errs = hybrid_classify(data, some_tree, some_model, some_res_string, some_classes, thresh=threshold)
     
     #Print separating characters to enhance readability of the various results
     print "="*10
@@ -778,7 +803,7 @@ def predict_with_hybrid_and_tree(data, some_tree, some_model, some_res_string, s
     print "="*10
     
     #Get a list of the various error rates as achieved by the decision tree
-    tree_errs = treepredict.testAccuracy(data, some_tree, some_classes, some_res_string)
+    tree_errs = treepredict.testAccuracy(data, some_tree, some_classes, some_res_string, bound=threshold)
     
     #Combine the errors into a single dataframe
     all_errs = pd.DataFrame({'Hybrid': hybrid_errs,
@@ -786,7 +811,8 @@ def predict_with_hybrid_and_tree(data, some_tree, some_model, some_res_string, s
                             index = ['Total Error Rate'] + ['Class {} Error Rate'.format(x) for x in some_classes] + ["Precision", "Recall"])
     return all_errs
 
-def predict_with_hybrid_tree_and_logit(data, some_tree, some_model, some_pure_logit, some_res_string, some_classes):
+def predict_with_hybrid_tree_and_logit(data, some_tree, some_model, some_pure_logit,
+                                       some_res_string, some_classes,threshold=0.5):
     """data = a node augmented dataframe on which predictions are to be made
     some_tree = the decision tree that will be used to make predictions on data
     some_model = the hybrid CART-Logit model which will make predictions on data
@@ -798,7 +824,8 @@ def predict_with_hybrid_tree_and_logit(data, some_tree, some_model, some_pure_lo
     model, the pure logistic regression, and the decision tree"""
     
     #Get a list of the various error rates as achieved by the hybrid logit model
-    hybrid_errs = hybrid_classify(data, some_tree, some_model, some_res_string, some_classes)
+    hybrid_errs = hybrid_classify(data, some_tree, some_model,
+                                  some_res_string, some_classes, thresh=threshold)
     
     #Print separating characters to enhance readability of the various results
     print "="*10
@@ -806,10 +833,12 @@ def predict_with_hybrid_tree_and_logit(data, some_tree, some_model, some_pure_lo
     print "="*10
     
     #Get a list of the various error rates as achieved by the decision tree
-    tree_errs = treepredict.testAccuracy(data, some_tree, some_classes, some_res_string)
+    tree_errs = treepredict.testAccuracy(data, some_tree, some_classes,
+                                         some_res_string, bound=threshold)
     
     #Get a list of the various error rates as achieved by the decision tree
-    logit_errors = logit_error_rates(data, some_pure_logit, some_res_string, some_classes, some_tree)
+    logit_errors = logit_error_rates(data, some_pure_logit, some_res_string,
+                                     some_classes, some_tree, d_bound=threshold)
     
     #Combine the errors into a single dataframe
     all_errs = pd.DataFrame({'Hybrid': hybrid_errs,

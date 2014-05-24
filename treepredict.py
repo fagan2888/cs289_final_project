@@ -218,13 +218,25 @@ def classProbs(observation, tree, classes):
             probs.append(0)
     return probs
 
-def predictWithTree(observation, tree, classes):
+def predictWithTree(observation, tree, classes, d_boundary=0.5):
     """observation = a particular row from the dataframe
     tree = the tree used to give predictions
     classes = a list of possible outcomes/classes that we care about"""
     
+    try:
+        assert len(classes) == 2
+    except Exception('Currently, predict with tree only works with two classes') as inst:
+        print inst
+        raise Exception
+        
     probs= classProbs(observation,tree, classes)
-    return classes[np.argmax(probs)] 
+    if probs[1] >= d_boundary:
+        return classes[1]
+    else:
+        return classes[0]
+    print "There is some unexpected error, none of the probabilities is greater than the boundary probability"
+    print "Perhaps this is a multiclass problem and the boundary probability was misspecified?"
+    return 
     
 def buildTreePandas(rows, res, min_ppl = None, maxDepth=None, scoref=entropy, depth=0):
     """rows = a list of lists where the inner lists represent a row of data.
@@ -304,11 +316,11 @@ def calc_prediction_error(data):
     return float(count_err)/tot
 
 
-def testAccuracy(testSet, tree, classes, res):
+def testAccuracy(testSet, tree, classes, res, bound=0.5):
     preds = [] #Initialize an empty list to hold the predictions
     actual = np.array(testSet[res]) #Get the actual array of class labels
     for ind, row in testSet.iterrows(): #Iterate over all rows of the test data
-        preds.append(predictWithTree(row, tree, classes)) #Make predictions on the test data
+        preds.append(predictWithTree(row, tree, classes, d_boundary=bound)) #Make predictions on the test data
     preds = np.array(preds) #make predictions an array
     preds_and_real = pd.DataFrame({'Predictions': preds, 'True Class': actual})
     
@@ -320,7 +332,12 @@ def testAccuracy(testSet, tree, classes, res):
     test_positive = len(preds_and_real[cond1])
     actual_positive = len(preds_and_real[cond2])
     
-    precision = float(true_positive) / test_positive
+    try:
+        precision = float(true_positive) / test_positive
+    except Exception as inst:
+        print inst
+        precision = np.nan
+        
     recall = float(true_positive) / actual_positive
     
     print "When using the decision tree, its various error rates are:"
