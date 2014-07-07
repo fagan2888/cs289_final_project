@@ -316,7 +316,7 @@ def calc_prediction_error(data):
     return float(count_err)/tot
 
 
-def testAccuracy(testSet, tree, classes, res, bound=0.5):
+def testAccuracy(testSet, tree, classes, res, bound=0.5, print_res=True):
     preds = [] #Initialize an empty list to hold the predictions
     actual = np.array(testSet[res]) #Get the actual array of class labels
     for ind, row in testSet.iterrows(): #Iterate over all rows of the test data
@@ -340,8 +340,9 @@ def testAccuracy(testSet, tree, classes, res, bound=0.5):
         
     recall = float(true_positive) / actual_positive
     
-    print "When using the decision tree, its various error rates are:"
-    print "Total Error: {}".format(tot_err)
+    if print_res:
+        print "When using the decision tree, its various error rates are:"
+        print "Total Error: {}".format(tot_err)
     
     groups_and_results = {}
     groups_and_results['groups'] = {}
@@ -349,11 +350,13 @@ def testAccuracy(testSet, tree, classes, res, bound=0.5):
     for state in classes:
         groups_and_results['groups'][state] = preds_and_real[preds_and_real['True Class'] == state]
         groups_and_results['results'][state] = calc_prediction_error(groups_and_results['groups'][state])
-        print "Class {} Error rate: {}".format(state, groups_and_results['results'][state]) 
+        if print_res:
+            print "Class {} Error rate: {}".format(state, groups_and_results['results'][state]) 
     errs = [tot_err] + [groups_and_results['results'][state] for state in classes] + [precision, recall]
 
-    print ""
-    print "The number of non-zero decision tree predictions is {}".format(len(preds_and_real[preds_and_real["Predictions"] == 1]))
+    if print_res:
+        print ""
+        print "The number of non-zero decision tree predictions is {}".format(len(preds_and_real[preds_and_real["Predictions"] == 1]))
     return errs #Return the accuracy of the tree's predictions.
     
 def __get_results(node):

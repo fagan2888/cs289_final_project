@@ -14,9 +14,9 @@ def split_data(df, pruning_proportion):
     
     rows = df.index.tolist() #Get a list of the rows in the dataframe
     np.random.shuffle(rows) #Randomly shuffle the list of rows in the dataframe
-    splitNum = round(pruning_proportion * len(rows)) #Find the position in rows that will be closest to the desired proportion
+    splitNum = int(round(pruning_proportion * len(rows))) #Find the position in rows that will be closest to the desired proportion
     training_rows, pruning_rows = rows[splitNum:], rows[:splitNum] #split the data
-    return training_rows, pruning_rows
+    return df.loc[training_rows], df.loc[pruning_rows]
 
 def find_perfect_preds(nodes):
     """nodes = a list of nodes returned by calling treepredict.fetchnodes() on a
@@ -614,7 +614,8 @@ def calc_error(data):
             count_err += 1 #If it does not, increment count_err by one
     return float(count_err)/tot #Return the error rate value for data.
       
-def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None, thresh=0.5):
+def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None, 
+                    thresh=0.5, show_res=True):
     #List the index values in aug_vSet
     tot_ind = aug_vSet.index.tolist()
     #Create a design matrix for the observations to be classified via the hybrid logit model
@@ -691,14 +692,15 @@ def hybrid_classify(aug_vSet, tree, fitted, res, classes, fit=None, thresh=0.5):
         
     recall = float(true_positive) / actual_positive
     
-    #Print resulting error rates and 
-    print "When using the hybrid-CART Logit model, the various errors are: "
-    print ""
-    print "Total Error: {}".format(tot_err)
-    print "Class 0 Error Rate: {}".format(class_0_err)
-    print "Class 1 Error Rate: {}".format(class_1_err)
-    print ""
-    print "Note: The number of non-zero logit predictions is {}".format(len(logit_preds[logit_preds["Predictions"] != 0]))
+    if show_res:
+        #Print resulting error rates and 
+        print "When using the hybrid-CART Logit model, the various errors are: "
+        print ""
+        print "Total Error: {}".format(tot_err)
+        print "Class 0 Error Rate: {}".format(class_0_err)
+        print "Class 1 Error Rate: {}".format(class_1_err)
+        print ""
+        print "Note: The number of non-zero logit predictions is {}".format(len(logit_preds[logit_preds["Predictions"] != 0]))
     
     #Return a list of the total, class 0, and class 1 error rates
     return [tot_err, class_0_err, class_1_err, precision, recall]
@@ -713,7 +715,8 @@ def strip_nodeNum_cols(df):
             del df[var] #Delete it from the dataframe
     return
 
-def logit_error_rates(testSet, model, res_string, the_classes, correct_tree, d_bound=0.5):
+def logit_error_rates(testSet, model, res_string, the_classes, correct_tree, 
+                      d_bound=0.5, display_res=True):
     """testSet = a node augmented dataframe on which predictions are to be made
     model = the fitted logistic regression model which will make predictions on data
     res_string = The string for the column name in testSet that has the classes.
@@ -749,11 +752,12 @@ def logit_error_rates(testSet, model, res_string, the_classes, correct_tree, d_b
     #Calculate the overall prediction error rate
     tot_err = calc_error(prediction_and_reality) 
     
-    #Print out the results and separating characters/lines for readability
-    print "="*10
-    print ""
-    print "When using the pure logit model, its various error rates are:"
-    print "Total Error Rate: {}".format(tot_err)
+    if display_res:
+        #Print out the results and separating characters/lines for readability
+        print "="*10
+        print ""
+        print "When using the pure logit model, its various error rates are:"
+        print "Total Error Rate: {}".format(tot_err)
     
     #Calculate the error rates for each individual class
     class_errs = [] #Initialize an empty list for the error rates for each class
@@ -762,7 +766,8 @@ def logit_error_rates(testSet, model, res_string, the_classes, correct_tree, d_b
         obs_in_state = prediction_and_reality[prediction_and_reality['True Class'] == state]
         #Calculate the prediction error rate for observations whose true class = state
         state_error = calc_error(obs_in_state)
-        print "Class {} Error Rate: {}".format(state,state_error) #Print results
+        if display_res:
+            print "Class {} Error Rate: {}".format(state,state_error) #Print results
         class_errs.append(state_error) #Add the error rate to class_errs
     
     cond1 = prediction_and_reality["Predictions"] == 1
@@ -780,8 +785,9 @@ def logit_error_rates(testSet, model, res_string, the_classes, correct_tree, d_b
     recall = float(true_positive) / actual_positive
     
     errs = [tot_err] + class_errs + [precision, recall] #make a list of all error types
-    print ""
-    print "Note: The number of non-zero logit predictions is {}".format(len(logit_predictions[logit_predictions["Predictions"] == 1]))
+    if display_res:
+        print ""
+        print "Note: The number of non-zero logit predictions is {}".format(len(logit_predictions[logit_predictions["Predictions"] == 1]))
     return errs #Return the errors of the pure logit model's predictions.
 
 def predict_with_hybrid_and_tree(data, some_tree, some_model, some_res_string, some_classes, threshold=0.5):
@@ -812,7 +818,8 @@ def predict_with_hybrid_and_tree(data, some_tree, some_model, some_res_string, s
     return all_errs
 
 def predict_with_hybrid_tree_and_logit(data, some_tree, some_model, some_pure_logit,
-                                       some_res_string, some_classes,threshold=0.5):
+                                       some_res_string, some_classes,threshold=0.5,
+                                       disp=True):
     """data = a node augmented dataframe on which predictions are to be made
     some_tree = the decision tree that will be used to make predictions on data
     some_model = the hybrid CART-Logit model which will make predictions on data
@@ -825,20 +832,24 @@ def predict_with_hybrid_tree_and_logit(data, some_tree, some_model, some_pure_lo
     
     #Get a list of the various error rates as achieved by the hybrid logit model
     hybrid_errs = hybrid_classify(data, some_tree, some_model,
-                                  some_res_string, some_classes, thresh=threshold)
+                                  some_res_string, some_classes, 
+                                  thresh=threshold, show_res=disp)
     
     #Print separating characters to enhance readability of the various results
-    print "="*10
-    print ""
-    print "="*10
+    if disp:
+        print "="*10
+        print ""
+        print "="*10
     
     #Get a list of the various error rates as achieved by the decision tree
     tree_errs = treepredict.testAccuracy(data, some_tree, some_classes,
-                                         some_res_string, bound=threshold)
+                                         some_res_string, bound=threshold,
+                                         print_res=disp)
     
     #Get a list of the various error rates as achieved by the decision tree
     logit_errors = logit_error_rates(data, some_pure_logit, some_res_string,
-                                     some_classes, some_tree, d_bound=threshold)
+                                     some_classes, some_tree, d_bound=threshold,
+                                     display_res=disp)
     
     #Combine the errors into a single dataframe
     all_errs = pd.DataFrame({'Hybrid': hybrid_errs,
